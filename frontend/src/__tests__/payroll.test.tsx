@@ -150,6 +150,7 @@ describe('PayrollPage & Compensation UI', () => {
     state.permissions.clear();
     state.permissions.add('payroll:read');
     state.permissions.add('payroll:manage');
+    state.permissions.add('payroll:create');
 
     vi.mocked(payrollApi.listPeriods).mockResolvedValue(mockPeriods);
     vi.mocked(payrollApi.listRecords).mockResolvedValue(mockRecords);
@@ -216,7 +217,7 @@ describe('PayrollPage & Compensation UI', () => {
     });
   });
 
-  it('hides create button when user lacks payroll:manage permission', async () => {
+  it('hides create button when user lacks payroll:create permission', async () => {
     state.permissions.clear();
     state.permissions.add('payroll:read');
 
@@ -233,7 +234,7 @@ describe('PayrollPage & Compensation UI', () => {
     expect(screen.queryByRole('button', { name: /Tạo kỳ lương mới/i })).not.toBeInTheDocument();
   });
 
-  it('shows and opens create period modal when user has payroll:manage permission', async () => {
+  it('shows and opens create period modal when user has payroll:create permission', async () => {
     render(
       <MemoryRouter>
         <PayrollPage />

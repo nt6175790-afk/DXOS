@@ -446,7 +446,9 @@ export class ComplianceService {
         orderBy: { expiryDate: 'asc' },
       });
 
-      return documents.map((d) => {
+      const sensitive = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_SENSITIVE_READ, orgId, tx);
+      const self = await tx.employee.findFirst({ where: { organizationId: orgId, userId, status: 'ACTIVE' }, select: { id: true } });
+      return documents.filter(d => d.sensitivity !== 'SENSITIVE' || sensitive || d.employeeId === self?.id).map((d) => {
         const isExpired = d.expiryDate ? new Date(d.expiryDate) < now : false;
         const diffMs = d.expiryDate ? new Date(d.expiryDate).getTime() - now.getTime() : 0;
         const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -470,6 +472,7 @@ export class ComplianceService {
 
   async getEmployeeCompliance(userId: string, orgId: string, employeeId: string) {
     return this.prisma.$transaction(async (tx) => {
+      if (!(await this.authorization.isActiveMember(userId, orgId, tx))) throw new ForbiddenException();
       const callerEmp = await tx.employee.findFirst({
         where: { organizationId: orgId, userId, status: 'ACTIVE' },
       });
@@ -533,6 +536,8 @@ export class ComplianceService {
           ? Math.round((fulfilledCategories.length / requirements.length) * 1000) / 10
           : 100;
 
+      const sensitive = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_SENSITIVE_READ, orgId, tx);
+      const visibleDocuments = documents.filter(d => d.sensitivity !== 'SENSITIVE' || isSelf || sensitive);
       return {
         employeeId,
         totalRequired: requirements.length,
@@ -540,7 +545,7 @@ export class ComplianceService {
         complianceRate,
         isCompliant: missingRequirements.length === 0,
         missingRequirements,
-        documents,
+        documents: visibleDocuments,
       };
     });
   }

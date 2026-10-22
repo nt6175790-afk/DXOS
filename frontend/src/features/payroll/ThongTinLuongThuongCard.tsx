@@ -127,7 +127,7 @@ export function CompensationCard({ employeeId, canManage = false }: Compensation
         ) : !active ? (
           <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
             <p className="font-semibold mb-1">Chưa thiết lập lương cơ bản</p>
-            <p>Nhân viên chưa có hồ sơ lương active. Hãy nhấn &quot;Điều chỉnh lương&quot; để thiết lập mức lương khởi điểm.</p>
+            <p>{canManage ? 'Chọn “Điều chỉnh lương” để thiết lập mức lương.' : 'Nhân viên chưa có mức lương hiện hành.'}</p>
           </div>
         ) : (
           <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -258,7 +258,7 @@ export function CompensationCard({ employeeId, canManage = false }: Compensation
               </div>
 
               <p className="text-[11px] text-slate-500">
-                Lưu ý: Hồ sơ lương cũ đang hoạt động sẽ tự động được đóng ngày hiệu lực trước ngày bắt đầu của mức lương mới để bảo toàn trọn vẹn dữ liệu lịch sử.
+                Mức lương mới sẽ kết thúc hiệu lực của mức lương cũ từ ngày áp dụng.
               </p>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">

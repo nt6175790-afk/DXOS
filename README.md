@@ -127,3 +127,7 @@ Kết quả local ngày 15/10/2026: **1.295 backend tests, 270 frontend tests PA
 Mã nguồn gốc: [Apache-2.0](LICENSE), [NOTICE](NOTICE). Thư viện/font/image giữ giấy phép riêng: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md). Snapshot Windows: evidence 936/936 package đã cài, gồm 12 publisher declarations phân biệt với standalone LICENSE; 110 package optional cần rà đúng nền tảng nếu phân phối. Binary release cần source/notices tương ứng.
 
 Xem [kết quả kiểm chứng local](docs/architecture/validation-status.md), [hướng dẫn đóng góp](CONTRIBUTING.md), [bảo mật](SECURITY.md) và [chuẩn bị Git](docs/architecture/git-publication.md).
+
+## Hướng dẫn phân quyền
+
+Xem [chức năng của toàn bộ 91 quyền và giới hạn nghiệp vụ](docs/architecture/permission-reference.md). Quyền áp dụng riêng từng tổ chức; tên vai trò không tự cấp quyền. Bảy key user/role CRUD hiện chỉ khai báo trong catalog, chưa phải API chức năng.

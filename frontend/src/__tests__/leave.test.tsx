@@ -127,7 +127,7 @@ describe('LeavePage and Modals', () => {
     vi.resetAllMocks();
     state.orgId = 'org-1';
     state.userId = 'user-actor';
-    state.permissions = new Set(['leave:read', 'leave:create', 'leave:approve', 'leave:cancel']);
+    state.permissions = new Set(['leave:read', 'leave:create', 'leave:approve', 'leave:cancel', 'employee:read']);
 
     vi.mocked(employeesApi.listEmployees).mockResolvedValue({
       items: [mockActorEmployee],

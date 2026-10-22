@@ -338,6 +338,8 @@ export interface AuditListParams extends PaginationParams {
 
 // === Permission keys & discovery ===
 export type Permission =
+  | 'user:read' | 'user:create' | 'user:update' | 'user:delete'
+  | 'role:create' | 'role:update' | 'role:delete'
   | 'document:read' | 'document:create' | 'document:update' | 'document:delete'
   | 'document:download' | 'document:sensitive:read' | 'document:manage'
   | 'automation:read' | 'automation:create' | 'automation:update' | 'automation:delete' | 'automation:manage'

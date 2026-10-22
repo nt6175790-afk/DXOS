@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { fileVisibility } from './file-visibility';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { Readable } from 'node:stream';
@@ -24,8 +25,8 @@ export class FilesService {
     private readonly scanner: FileScannerService) {}
 
   // Trusted Work reference query after task/file authorization in the caller's transaction.
-  async availableTaskReference(organizationId: string, id: string, tx: Prisma.TransactionClient) {
-    const row = await tx.fileObject.findUnique({ where: { organizationId_id: { organizationId, id } },
+  async availableTaskReference(organizationId: string, id: string, tx: Prisma.TransactionClient, actorId: string) {
+    const row = await tx.fileObject.findFirst({ where: { organizationId, id, ...await fileVisibility(this.authorization, tx, actorId, organizationId) },
       select: { ...taskFileProjection, status: true } });
     if (!row) throw new NotFoundException();
     if (row.status !== 'AVAILABLE') throw new ConflictException();
@@ -81,7 +82,7 @@ export class FilesService {
     return this.transaction(async (tx) => {
       await this.allow(tx, user, org, PERMISSIONS.FILE_READ);
       this.identifier(id);
-      const row = await tx.fileObject.findFirst({ where: { id, organizationId: org, status: 'AVAILABLE' }, select: publicFile });
+      const row = await tx.fileObject.findFirst({ where: { id, organizationId: org, ...await fileVisibility(this.authorization, tx, user, org), status: 'AVAILABLE' }, select: publicFile });
       if (!row) throw new ForbiddenException();
       return row;
     });
@@ -90,7 +91,7 @@ export class FilesService {
   async list(user: string, org: string, query: FileListQueryDto) {
     return this.transaction(async (tx) => {
       await this.allow(tx, user, org, PERMISSIONS.FILE_READ);
-      const rows = await tx.fileObject.findMany({ where: { organizationId: org, status: 'AVAILABLE',
+      const rows = await tx.fileObject.findMany({ where: { organizationId: org, ...await fileVisibility(this.authorization, tx, user, org), status: 'AVAILABLE',
         ...(query.after ? { id: { gt: query.after } } : {}) }, select: publicFile,
         orderBy: { id: 'asc' }, take: query.limit + 1 });
       const items = rows.slice(0, query.limit);
@@ -101,7 +102,7 @@ export class FilesService {
   async download(user: string, org: string, id: string) {
     const row = await this.transaction(async (tx) => {
       await this.allow(tx, user, org, PERMISSIONS.FILE_READ); this.identifier(id);
-      const found = await tx.fileObject.findFirst({ where: { id, organizationId: org, status: 'AVAILABLE' } });
+      const found = await tx.fileObject.findFirst({ where: { id, organizationId: org, ...await fileVisibility(this.authorization, tx, user, org), status: 'AVAILABLE' } });
       if (!found) throw new ForbiddenException();
       return found;
     });
@@ -113,7 +114,7 @@ export class FilesService {
   async remove(user: string, org: string, id: string) {
     return this.transaction(async (tx) => {
       await this.allow(tx, user, org, PERMISSIONS.FILE_DELETE); this.identifier(id);
-      const row = await tx.fileObject.findFirst({ where: { id, organizationId: org, status: { in: ['AVAILABLE', 'DELETED'] } } });
+      const row = await tx.fileObject.findFirst({ where: { id, organizationId: org, ...await fileVisibility(this.authorization, tx, user, org), status: { in: ['AVAILABLE', 'DELETED'] } } });
       if (!row) throw new ForbiddenException();
       if (row.status === 'AVAILABLE') {
         await tx.fileObject.update({ where: { id }, data: { status: 'DELETED' } });

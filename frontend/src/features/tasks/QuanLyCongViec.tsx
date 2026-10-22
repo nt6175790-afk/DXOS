@@ -26,7 +26,8 @@ import { TaskKanban } from './TaskKanban';
 
 export function TasksPage() {
   const { currentOrg } = useOrganization();
-  return <TasksContent key={currentOrg?.id ?? 'no-organization'} />;
+  const { permissions } = usePermission();
+  return <TasksContent key={`${currentOrg?.id ?? 'no-organization'}:${permissions.join(',')}`} />;
 }
 
 function TasksContent() {
@@ -68,14 +69,14 @@ function TasksContent() {
 
   // Load reference data only if permitted
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId || isPermissionLoading || !canRead) return;
     if (canReadEmp) {
       listEmployees(orgId, { limit: 100, status: 'ACTIVE' }).then((r) => setEmployees(r.items)).catch(() => {});
     }
     if (canReadDept) {
       listDepartments(orgId, { limit: 100, status: 'ACTIVE' }).then((r) => setDepartments(r.items)).catch(() => {});
     }
-  }, [orgId, canReadEmp, canReadDept]);
+  }, [orgId, isPermissionLoading, canRead, canReadEmp, canReadDept]);
 
   const getEmployeeName = (id: string | null) => {
     if (!id) return '—';
@@ -130,7 +131,7 @@ function TasksContent() {
   }, [orgId, isPermissionLoading, canRead, loadTasks]);
 
   const handleCreate = async () => {
-    if (!orgId) return;
+    if (!orgId || !canCreate || isSaving) return;
     setIsSaving(true);
     setFormErrors({});
     try {
@@ -139,7 +140,7 @@ function TasksContent() {
         description: formData.description.trim() || undefined,
         priority: formData.priority,
         departmentId: formData.departmentId || undefined,
-        assigneeEmployeeId: formData.assigneeEmployeeId || undefined,
+        assigneeEmployeeId: canAssign ? formData.assigneeEmployeeId || undefined : undefined,
         dueAt: formData.dueAt ? new Date(formData.dueAt).toISOString() : undefined,
       };
       await createTask(orgId, data);
@@ -153,7 +154,7 @@ function TasksContent() {
           showToast('Bạn không có quyền tạo công việc.', 'error');
           setCreateOpen(false);
         } else if (err.error.code === 'CONFLICT') {
-          setFormErrors({ general: 'Xung đột dữ liệu — nhân viên hoặc phòng ban tham chiếu không hợp lệ.' });
+          setFormErrors({ general: 'Nhân viên hoặc phòng ban đã thay đổi. Hãy tải lại và chọn lại.' });
         } else {
           setFormErrors({ general: err.error.message });
         }
@@ -324,8 +325,8 @@ function TasksContent() {
             </select>
           </FormField>
           {canAssign && (
-            <FormField label="Người phụ trách" htmlFor="task-assignee" hint="Không bắt buộc — yêu cầu quyền phân công">
-              <select id="task-assignee" className="input-field" value={formData.assigneeEmployeeId} onChange={(e) => setFormData({...formData, assigneeEmployeeId: e.target.value})}>
+            <FormField label="Người phụ trách" htmlFor="task-assignee" hint={!canReadEmp ? 'Cần quyền xem nhân sự để chọn người phụ trách.' : undefined}>
+              <select id="task-assignee" className="input-field" disabled={!canReadEmp} value={formData.assigneeEmployeeId} onChange={(e) => setFormData({...formData, assigneeEmployeeId: e.target.value})}>
                 <option value="">Chưa phân công</option>
                 {employees.map((e) => <option key={e.id} value={e.id}>{e.displayName}</option>)}
               </select>

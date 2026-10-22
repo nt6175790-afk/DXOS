@@ -247,7 +247,7 @@ export function MembersTab() {
   if (!canReadRoles || isForbidden) {
     return (
       <ForbiddenState
-        message="Bạn không có quyền xem danh sách thành viên tổ chức này (yêu cầu quyền role:read)."
+        message="Bạn không có quyền xem thành viên tổ chức."
       />
     );
   }
@@ -314,7 +314,7 @@ export function MembersTab() {
         <EmptyState
           icon={Users}
           title="Chưa có thành viên nào"
-          description="Tổ chức hiện chưa có thành viên hoặc bạn không có quyền xem thông tin chi tiết."
+          description="Thành viên mới sẽ xuất hiện tại đây."
         />
       ) : (
         <div className="space-y-4">
@@ -407,12 +407,12 @@ export function MembersTab() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenRevokeDialog(member, role)}
-                                    disabled={isSelf}
+                                    disabled={isSelf || member.status !== 'ACTIVE'}
                                     className="ml-0.5 text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
                                     title={
                                       isSelf
                                         ? 'Không thể tự thay đổi vai trò của chính mình'
-                                        : `Thu hồi vai trò ${role.name}`
+                                        : member.status !== 'ACTIVE' ? 'Chỉ thay đổi vai trò của thành viên đang hoạt động' : `Thu hồi vai trò ${role.name}`
                                     }
                                     aria-label={`Thu hồi vai trò ${role.name} của ${member.displayName || member.email}`}
                                   >
@@ -515,7 +515,7 @@ export function MembersTab() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenRevokeDialog(member, role)}
-                                disabled={isSelf}
+                                disabled={isSelf || member.status !== 'ACTIVE'}
                                 className="ml-0.5 text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
                                 aria-label={`Thu hồi vai trò ${role.name} của ${member.displayName || member.email}`}
                               >
@@ -619,7 +619,6 @@ export function MembersTab() {
                 label="Chọn vai trò"
                 htmlFor={roleSelectId}
                 required
-                hint="Chọn vai trò từ danh mục vai trò của tổ chức"
               >
                 <select
                   id={roleSelectId}
@@ -716,7 +715,7 @@ export function MembersTab() {
             </p>
 
             <div className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200">
-              Thành viên này sẽ mất tất cả các quyền hạn tương ứng được cấp bởi vai trò sau khi thu hồi.
+              Thành viên sẽ mất các quyền do vai trò này cấp.
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">

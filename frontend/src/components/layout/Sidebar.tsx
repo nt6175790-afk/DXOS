@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { LayoutDashboard, Building2, Users, CheckSquare, CalendarDays, CalendarOff, Clock,
   ClipboardCheck, Bell, FolderOpen, Bot, Settings, X, Banknote, BarChart3, Award,
-  FileCheck, GitMerge, Zap, ShieldCheck } from 'lucide-react';
+  FileCheck, GitMerge, Zap } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { canOpenRoute } from './navigation';
 
@@ -66,7 +66,6 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       </nav>
       <div className="shrink-0 p-3 border-t border-white/10">
         {canOpenRoute('/settings', hasPermission) && <NavLink to="/settings" onClick={onClose} className={({isActive}) => clsx('workspace-nav-link', isActive && 'is-active')}><Settings className="h-[18px] w-[18px]" aria-hidden="true" />Cài đặt</NavLink>}
-        <p className="flex items-center gap-2 px-3 pt-3 pb-1 text-[11px] text-slate-400"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Quyền truy cập theo tổ chức</p>
       </div>
     </aside>
   </>;

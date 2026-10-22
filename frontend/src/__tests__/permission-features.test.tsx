@@ -277,7 +277,7 @@ describe('DXOS-FRONTEND-003: Feature-level Permission UX Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/bạn không có quyền xem thông tin cài đặt tổ chức này/i)).toBeInTheDocument();
+        expect(screen.getByText(/Bạn không có quyền xem cài đặt tổ chức/i)).toBeInTheDocument();
       });
     });
 

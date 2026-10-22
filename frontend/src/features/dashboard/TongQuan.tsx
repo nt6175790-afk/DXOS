@@ -55,9 +55,9 @@ function Heading({ children, to }: { children: React.ReactNode; to?: string }) {
 }
 
 const quickActions = [
-  { to: '/tasks', label: 'Thêm công việc', icon: Plus, permission: 'task:create' },
-  { to: '/people', label: 'Thêm nhân sự', icon: UserPlus, permission: 'employee:create' },
-  { to: '/calendar', label: 'Tạo sự kiện', icon: CalendarPlus, permission: 'calendar:create' },
+  { to: '/tasks', label: 'Thêm công việc', icon: Plus, permission: 'task:create', readPermissions: ['task:read'] },
+  { to: '/people', label: 'Thêm nhân sự', icon: UserPlus, permission: 'employee:create', readPermissions: ['employee:read'] },
+  { to: '/calendar', label: 'Tạo sự kiện', icon: CalendarPlus, permission: 'calendar:create', readPermissions: ['task:read', 'calendar:read'] },
   { to: '/files', label: 'Kho tài liệu', icon: FileText, permission: 'file:read' },
   { to: '/my-schedule', label: 'Lịch đi làm', icon: CalendarDays, permission: null },
   { to: '/attendance', label: 'Chấm công', icon: Clock, permission: 'attendance:read' },
@@ -153,7 +153,7 @@ export function DashboardPage() {
       <section className="card dashboard-actions p-4 sm:p-5" aria-label="Tác vụ nhanh">
         <div className="flex items-center justify-between mb-4"><h2 className="text-xs font-semibold tracking-wider uppercase text-slate-500">Tác vụ nhanh</h2><span className="text-xs text-slate-500 hidden sm:inline">Truy cập công việc hằng ngày</span></div>
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          {quickActions.filter(action => !action.permission || hasPermission(action.permission)).map(action => <Link key={action.to} to={action.to} className="dashboard-action-link">
+          {quickActions.filter(action => (!action.permission || hasPermission(action.permission)) && (!('readPermissions' in action) || action.readPermissions.some(permission => hasPermission(permission)))).map(action => <Link key={action.to} to={action.to} className="dashboard-action-link">
             <span className="dashboard-action-icon"><action.icon className="h-[18px] w-[18px]" aria-hidden="true" /></span>
             <span className="min-w-0 text-sm font-medium leading-5">{action.label}</span>
             <ArrowRight className="h-3.5 w-3.5 ml-auto shrink-0 opacity-40 hidden sm:block" aria-hidden="true" />

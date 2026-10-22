@@ -1,12 +1,16 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AUDIT_EVENTS } from '../audit/audit-catalog';
-import { isOrganizationIdentifier } from '../rbac/permission-catalog';
+import { isOrganizationIdentifier, PERMISSIONS } from '../rbac/permission-catalog';
+import { AuthorizationService } from '../rbac/authorization.service';
 import { NotificationService } from '../notifications/notification.service';
 import { NOTIFICATION_TYPES } from '../notifications/notification-catalog';
 import { WorkflowService } from '../workflow/workflow.service';
@@ -26,6 +30,7 @@ export class AutomationEngineService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
     private readonly workflows: WorkflowService,
+    private readonly authorization: AuthorizationService,
   ) {}
 
   async dispatchTrigger(event: TriggerEventContext, actorId = 'system') {
@@ -273,8 +278,14 @@ export class AutomationEngineService {
     }
   }
 
-  async listExecutions(organizationId: string, limit = 50) {
-    return this.prisma.automationExecution.findMany({
+  async listExecutions(actorId: string, organizationId: string, limit = 50) {
+    const take = Number(limit);
+    if (!Number.isInteger(take) || take < 1) throw new BadRequestException();
+    return this.prisma.$transaction(async (tx) => {
+      if (!(await this.authorization.can(actorId, PERMISSIONS.AUTOMATION_READ, organizationId, tx))) {
+        throw new ForbiddenException();
+      }
+      return tx.automationExecution.findMany({
       where: { organizationId },
       include: {
         rule: {
@@ -282,7 +293,8 @@ export class AutomationEngineService {
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: Math.min(limit, 100),
-    });
+        take: Math.min(take, 100),
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }
