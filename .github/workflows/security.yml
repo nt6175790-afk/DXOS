@@ -29,7 +29,7 @@ jobs:
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "22.21.1", cache: npm, cache-dependency-path: "package-lock.json" }
       - run: npm ci
       - run: node --test backend/scripts/source-publication-policy.test.js
@@ -84,7 +84,7 @@ jobs:
           docker build -f backend/deploy/apisix.Dockerfile -t dxos-security-apisix-oss .
           docker build -f backend/deploy/waf.Dockerfile -t dxos-security-waf-oss .
           docker pull quay.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "22.21.1" }
       - run: node backend/scripts/scan-runtime-images.js --images-only
       - uses: actions/upload-artifact@v4
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "22.21.1" }
       - name: Export only the tested Git revision
         run: |
