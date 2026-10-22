@@ -55,7 +55,7 @@ jobs:
           node backend/scripts/collect-license-notices.js --strict
       - name: OSS quality gate (Sonar replacement)
         run: node backend/scripts/run-quality-local.js
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: verification-results
@@ -87,7 +87,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22.21.1" }
       - run: node backend/scripts/scan-runtime-images.js --images-only
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: runtime-sbom-and-scans
@@ -128,7 +128,7 @@ jobs:
         if: failure()
         working-directory: ${{ runner.temp }}/dxos-release-source
         run: docker compose -p dxos-ci-demo --env-file .secrets/demo/compose.env -f backend/deploy/compose.demo.yml logs --no-color --tail 40 bootstrap backend frontend
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: source-demo-smoke
