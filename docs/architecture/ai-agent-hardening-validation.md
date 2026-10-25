@@ -36,6 +36,8 @@ Commands: npm run test:rbac:mysql --workspace @dx-os/backend -- --coverage; npm 
 
 GitHub Actions on the exact pushed commit is the source of truth for remote verify, runtime vulnerability scans, and build/run from the Git archive. Local test results do not substitute for those checks or claim they already completed. See the PR checks and attached runtime/source-demo artifacts for their final status.
 
+The initial remote run passed verify and all 58 exact-source Docker HTTP checks, but found three CA/JVM vulnerabilities in the old Keycloak image. The follow-up preserves the official Keycloak 26.8.1 distribution and uses pinned Corretto 21.0.13 with the reviewed Amazon Linux security snapshot. Local OS/Java HIGH/CRITICAL scan is clear; a real disposable Keycloak test passes 11 checks, including required S256, login, signed ID token claims and code replay denial. CI now repeats this live test and the full nine-image scan. See [runtime packaging details](keycloak-runtime-hardening.md). No findings are suppressed and gates remain enabled.
+
 No cloud model request, new API key or live OpenBao rotation was performed for this hardening. The author's earlier 40/40 Ollama result is historical, using an earlier permission matrix. Cloud billing and data handling remain provider-specific; mock evaluation is not live-model verification. Frontend bundle-size and existing jsdom test warnings remain non-failing limitations.
 
 The operator's native dx_os database, credentials and ACLs were not modified. Existing v0.2.0 release/tag/assets remain unchanged; this is source hardening on a separate branch, not a relabeled old release.

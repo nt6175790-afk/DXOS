@@ -108,6 +108,8 @@ Chỉ chạy trên database development/test. Đọc code seed trước khi ch�
 
 Xem [hướng dẫn local](docs/architecture/security-devsecops-setup.md). Giao diện qua WAF: http://localhost:8088. Stack này dùng MySQL trên host, OpenBao TLS/KV-v2/Raft và AppRole agent; không chứa secret/volume của máy gốc. Keycloak chỉ liên kết danh tính, không tự cấp quyền DX-OS. Sonar/SonarJS đã thay bằng quality gate mã nguồn mở.
 
+Keycloak giữ phiên bản 26.8.1, được đóng gói trên OpenJDK 21 đã vá thay lớp JVM/CA cũ; xem [runtime hardening và kiểm thử SSO](docs/architecture/keycloak-runtime-hardening.md). Security Compose và CI sử dụng cùng image build; không cần thay realm, client hoặc mật khẩu đang có.
+
 ### Trợ lý AI
 
 Trợ lý là agent **chỉ đọc** tự viết, không dùng LangChain. Model chọn trong 13 công cụ tra cứu: công việc, phê duyệt, nghỉ phép, chấm công, lịch, hồ sơ giấy tờ, phòng ban, nhân sự, số liệu tổng hợp và `calculate` để tính toán. Trước mỗi lần chạy công cụ, backend kiểm lại quyền của người hỏi trong tổ chức và chỉ trả các trường được phép (không có số điện thoại, email, lương từng người). Câu trả lời có nút nguồn dẫn tới bản ghi và cảnh báo khi số liệu không khớp dữ liệu. Không lưu hội thoại phía server, không có RAG/vector. Thiết kế: [spec](docs/architecture/ai-agent-v1-spec.md), [HLD](docs/architecture/ai-agent-v1-hld.md), [API](contracts/api/ai.md).

@@ -85,15 +85,19 @@ jobs:
           docker build -f backend/deploy/clamav.Dockerfile -t dxos-security-clamav-oss .
           docker build -f backend/deploy/apisix.Dockerfile -t dxos-security-apisix-oss .
           docker build -f backend/deploy/waf.Dockerfile -t dxos-security-waf-oss .
-          docker pull quay.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
+          docker build -f backend/deploy/keycloak.Dockerfile -t dxos-security-keycloak .
       - uses: actions/setup-node@v4
         with: { node-version: "22.21.1" }
+      - name: Verify the patched Keycloak runtime with an isolated S256 login
+        run: node backend/scripts/test-keycloak-image.js
       - run: node backend/scripts/scan-runtime-images.js --images-only
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: runtime-sbom-and-scans
-          path: security-artifacts/runtime-*
+          path: |
+            security-artifacts/runtime-*
+            security-artifacts/keycloak-live-smoke.json
 
   source-demo:
     name: Build and run from exact source archive
