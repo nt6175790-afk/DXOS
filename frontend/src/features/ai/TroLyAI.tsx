@@ -37,9 +37,15 @@ function AnswerFooter({ msg }: { msg: ChatMessage }) {
   const citations = (msg.citations ?? []).filter((c) => c.href.startsWith('/') && !c.href.startsWith('//'));
   const unique = citations.filter((c, i) => citations.findIndex((o) => o.href === c.href && o.label === c.label) === i);
   const visible = unique.slice(0, MAX_VISIBLE_CITATIONS);
-  if (!visible.length && msg.numericCheck?.status !== 'WARN' && msg.finishReason !== 'tool_limit') return null;
+  const hasNumericCheck = msg.numericCheck?.status === 'PASS' || msg.numericCheck?.status === 'WARN';
+  if (!visible.length && !hasNumericCheck && msg.finishReason !== 'tool_limit') return null;
   return (
     <div className="mt-2 space-y-1.5">
+      {hasNumericCheck && (
+        <p className="text-[11px] text-slate-500" data-testid="ai-numeric-scope">
+          Chỉ đối chiếu sự xuất hiện của các con số; hãy kiểm tra ý nghĩa tại nguồn.
+        </p>
+      )}
       {msg.numericCheck?.status === 'WARN' && (
         <div className="flex items-start gap-1.5 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1" data-testid="ai-numeric-warning">
           <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" aria-hidden="true" />

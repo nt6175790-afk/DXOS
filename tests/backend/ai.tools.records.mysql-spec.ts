@@ -195,6 +195,37 @@ mysqlDescribe('AI agent record tools on real MySQL', () => {
     await expect(run('find_employee', { query: 'CANARY' }, ctx([P.EMPLOYEE_READ]))).resolves.toMatchObject({ status: 'EMPTY' });
   });
 
+  it('keeps disabled document requirements disabled and does not seed defaults on a read', async () => {
+    await db.documentRequirement.create({ data: { organizationId: orgA, category: 'INSURANCE', name: 'Optional', isRequired: false } });
+    const before = await writes();
+    const result = await run('list_document_alerts', { kind: 'missing' }, ctx(await grants([P.DOCUMENT_READ])));
+    expect(result).toMatchObject({ status: 'EMPTY', total: 0, items: [] });
+    expect(await writes()).toEqual(before);
+  });
+
+  it('counts attendance exceptions and missing check-ins beyond the first 2000 rows', async () => {
+    const bulkDepartment = await db.department.create({ data: { organizationId: orgA, code: 'BULK', name: 'Bulk' } });
+    const employees = Array.from({ length: 2002 }, (_, i) => ({ id: randomUUID(), userId: randomUUID(), organizationId: orgA,
+      employeeCode: `BULK-${i}`, displayName: `Bulk ${i}`, departmentId: bulkDepartment.id }));
+    users.push(...employees.map(e => e.userId));
+    await db.user.createMany({ data: employees.map(e => ({ id: e.userId, email: `${e.userId}@example.test` })) });
+    await db.organizationMembership.createMany({ data: employees.map(e => ({ organizationId: orgA, userId: e.userId })) });
+    await db.employee.createMany({ data: employees });
+    const shift = await db.shift.findFirstOrThrow({ where: { organizationId: orgA } });
+    const idAt = (i: number) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`;
+    const workDate = day('2026-10-23');
+    await db.attendanceRecord.createMany({ data: employees.slice(0, 2001).map((e, i) => ({
+      id: idAt(i), organizationId: orgA, employeeId: e.id, workDate, status: i === 2000 ? 'LATE' as const : 'PRESENT' as const,
+      checkInAt: new Date('2026-10-23T01:15:00Z'), checkOutAt: new Date('2026-10-23T10:00:00Z'), lateMinutes: i === 2000 ? 15 : 0,
+    })) });
+    await db.workSchedule.createMany({ data: employees.map((e, i) => ({ id: idAt(i), organizationId: orgA,
+      employeeId: e.id, workDate, shiftId: shift.id })) });
+    const result = await run('list_attendance_exceptions', { fromDate: '2026-10-23', toDate: '2026-10-23', departmentId: bulkDepartment.id },
+      ctx(await grants([P.ATTENDANCE_READ, P.ATTENDANCE_MANAGE])));
+    expect(result).toMatchObject({ status: 'OK', total: 2, byType: { LATE: 1, NOT_CHECKED_IN: 1 }, truncated: false });
+    expect(result.items.map((row: { employee: string }) => row.employee).sort()).toEqual(['Bulk 2000', 'Bulk 2001']);
+  }, 60_000);
+
   it('list_attendance_exceptions finds late, incomplete and not-checked-in days and respects approved leave', async () => {
     const context = ctx(await grants([P.ATTENDANCE_READ, P.ATTENDANCE_MANAGE]));
     const result = await run('list_attendance_exceptions', { fromDate: '2026-10-23', toDate: '2026-10-24' }, context);

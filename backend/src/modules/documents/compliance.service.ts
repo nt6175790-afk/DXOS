@@ -359,7 +359,8 @@ export class ComplianceService {
       if (!(await this.authorization.can(userId, PERMISSIONS.DOCUMENT_READ, orgId, tx))) throw new ForbiddenException();
       const stored = await tx.documentRequirement.findMany({ where: { organizationId: orgId, isRequired: true },
         select: { category: true, name: true, applicableDepartmentId: true } });
-      const requirements = stored.length ? stored : DEFAULT_REQUIREMENTS.map((r) => ({ ...r, applicableDepartmentId: null }));
+      const configured = await tx.documentRequirement.count({ where: { organizationId: orgId } });
+      const requirements = configured ? stored : DEFAULT_REQUIREMENTS.map((r) => ({ ...r, applicableDepartmentId: null }));
       const employees = await tx.employee.findMany({
         where: { organizationId: orgId, status: 'ACTIVE', ...(query.departmentId ? { departmentId: query.departmentId } : {}) },
         orderBy: [{ displayName: 'asc' }, { id: 'asc' }],

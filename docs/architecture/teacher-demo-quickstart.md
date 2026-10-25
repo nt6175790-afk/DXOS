@@ -79,9 +79,12 @@ npm.cmd run db:migrate:deploy
 npm.cmd run db:migrate:status
 npm.cmd --workspace @dx-os/backend run seed:demo-admin
 npm.cmd --workspace @dx-os/backend run seed:demo
+npm.cmd --workspace @dx-os/backend run seed:demo-roles
 ```
 
 Migration status phải báo database đã cập nhật. Seed tạo tổ chức dxos-demo, thành viên ACTIVE và quyền theo cơ chế RBAC hiện có. seed:demo-admin đặt/cập nhật mật khẩu admin theo DEMO_ADMIN_PASSWORD; seed:demo dùng cùng mật khẩu cho thành viên demo mới, giữ mật khẩu thành viên đã tồn tại. Chỉ dùng các seed này trên database demo, không dùng production.
+
+`seed:demo-roles` có trong nhánh hardening kế tiếp v0.2.0, xem [ma trận bốn tài khoản](demo-business-permissions.md). Nếu đang chạy tag v0.2.0 cũ, bỏ qua lệnh này; tag cũ không được thay đổi. Bản hardening tạo đúng vai trò kinh doanh/kỹ thuật/kho vận/nhân sự, không cấp quyền rộng chỉ để thử AI.
 
 ## 4. Khởi động và đăng nhập
 

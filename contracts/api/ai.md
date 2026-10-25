@@ -57,6 +57,11 @@ Only normalized data is returned. Fields marked *added* are additive; existing c
 - `citations` (*added*): at most 30 records the answer is based on, only from tool results of this request. `type` ∈ task, approval, leave, document, employee, department, event, attendance, schedule, metric; `href` is always an internal frontend route (validated server-side); `id` may be null for list pages.
 - `numericCheck` (*added*): `WARN` with `unmatchedCount` when the answer contains numbers that do not appear in the data the request saw.
 
+`numericCheck.status=PASS` means only that numeric values appeared in the available context, not that their meaning,
+unit, subject or conclusion is correct. For example, a source containing 10 tasks cannot verify a claim of 10 employees.
+Clients must not label this result as factual verification; the web client explains this limitation for numeric answers.
+Use source links to confirm the actual records. This check does not prevent all model hallucinations.
+
 Provider payloads, headers, stack traces, prompts, responses, tool arguments and tool results, credentials and internal URLs are never returned or persisted. The `AiRequest` row stores tenant/actor, provider/model, request correlation, bounded usage, lifecycle status, error category and latency only. Audit records contain `ai.request.started`, `ai.request.succeeded` or `ai.request.failed` and request correlation; they never contain conversation content. Structured logs record per step and per tool only names, outcomes, counts and latency (`ai_agent_step`, `ai_tool_invoked`, `ai_numeric_check`, `ai_agent_completed`).
 
 ## Configuration

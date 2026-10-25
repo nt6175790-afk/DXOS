@@ -1,5 +1,7 @@
 # Spec: Xây lại Trợ lý AI thành agent hỏi đáp chỉ đọc trên model open-weight (DXOS-AI-003)
 
+**Cập nhật hardening 26/10/2026:** [Ma trận quyền nghiệp vụ](demo-business-permissions.md) thay thế các role demo trong bản thiết kế ban đầu. Chỉ admin/kỹ thuật có `ai:use`; không cấp quyền duyệt chung/lương/hồ sơ nhạy cảm để chạy eval. Các số liệu live tại phụ lục C là bằng chứng lịch sử do tác giả ghi nhận, không phải kết quả của ma trận mới. `numericCheck=PASS` chỉ kiểm sự xuất hiện của con số, chưa xác minh ý nghĩa; giao diện và API nêu rõ giới hạn này. Chấm công đọc đủ các trang nội bộ trước khi tính tổng; yêu cầu hồ sơ đã tắt không bị áp lại mặc định.
+
 ## 0. Meta
 
 | Mục | Giá trị |
@@ -7,7 +9,7 @@
 | Mã feature | DXOS-AI-003 (kế thừa DXOS-AI-002 — `contracts/api/ai.md`) |
 | Owner / PIC | Khánh |
 | Reviewer | Chưa chốt (đề xuất: Vinh + chủ repository) |
-| Trạng thái | **Đã triển khai trên nhánh làm việc local (PR 1–6), chưa commit / chưa mở PR**. Kết quả kiểm thử: phụ lục C |
+| Trạng thái | Đã commit trên `feat/ai-agent`, PR #23; các sửa hardening tích hợp ở `fix/ai-agent-hardening`. Trạng thái merge/CI xem GitHub, không suy từ kết quả local |
 | Phiên bản | 0.5 — 25/10/2026 |
 | BRD / Figma / Jira | Chưa có. Wireframe dạng chữ ở mục 8. Work item tạo bằng `.github/ISSUE_TEMPLATE/work-item.yml` |
 | Tài liệu liên quan | [HLD](ai-agent-v1-hld.md), `docs/architecture/ai-foundation.md`, `contracts/api/ai.md`, `docs/architecture/rbac.md`, `contracts/api/error-envelope.md` |

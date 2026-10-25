@@ -61,6 +61,8 @@ Database chứa metadata còn volume file chứa bytes tài liệu: backup/resto
 
 ## Phân tách demo và production
 
+Bản hardening kế tiếp v0.2.0 bổ sung [bốn vai trò nghiệp vụ](demo-business-permissions.md) trong bootstrap và kiểm thử từng tài khoản; tag v0.2.0 giữ nguyên hành vi lịch sử. Dùng đúng source/commit của bản mới để thử phần AI agent và ma trận mới. `demo:refresh` giữ quyền đã có, không tự ghi đè role do người vận hành chỉnh.
+
 Compose này dùng NODE_ENV=development, AI mock và local demo seed hiện có. SSO/ClamAV/OpenBao tắt trong bộ demo đơn giản; upload tại đây không được quét virus. Không dùng dữ liệu thật, không public/tunnel bộ demo này. Muốn trình diễn đầy đủ các tích hợp, dùng [security stack hiện có](security-devsecops-setup.md).
 
 Production cần HTTPS/domain, backup/restore đã diễn tập, identity service/database production, secret custody ngoài máy ứng dụng, shared rate-limit store và ClamAV fail-closed. Không coi local Compose là cấu hình production. Quyền vẫn kiểm tra ở backend cho từng actor/tổ chức; seed chỉ cấp quyền demo theo catalog hiện có, không có magic administrator bypass.

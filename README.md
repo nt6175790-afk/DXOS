@@ -98,7 +98,7 @@ Frontend: http://localhost:5173 · Health: http://localhost:3000/api/v1/health �
 ```powershell
 npm --workspace @dx-os/backend run seed:demo-admin
 npm --workspace @dx-os/backend run seed:demo
-npm --workspace @dx-os/backend run seed:demo-roles     # tùy chọn: vai trò Nhân viên / Quản lý / Nhân sự cho tài khoản demo
+npm --workspace @dx-os/backend run seed:demo-roles     # vai trò Kinh doanh / Kỹ thuật / Kho vận / Nhân sự đã chốt
 npm --workspace @dx-os/backend run seed:demo-activity  # tùy chọn: chấm công, đơn nghỉ, lịch họp gần ngày hiện tại
 ```
 
@@ -144,11 +144,15 @@ Mặc định `AI_PROVIDER=mock`: chạy offline, không cần key, hiểu các 
   Ollama tự host trên máy chạy Docker: Ollama mặc định chỉ nghe `127.0.0.1`, cần cho nó nghe trên địa chỉ container truy cập được (ví dụ `OLLAMA_HOST=0.0.0.0`) và chặn cổng 11434 với mạng ngoài bằng firewall.
 - **Docker demo cho người chấm** (cổng 8090, `demo:*`): cố định mock, không cần key.
 
-Để thấy trợ lý trả lời khác nhau theo quyền, chạy `seed:demo-roles` và `seed:demo-activity` ở mục [Dữ liệu demo](#dữ-liệu-demo), rồi hỏi cùng một câu bằng `an.demo@dxos.local` (nhân viên), `minh-anh.demo@dxos.local` (quản lý), `thu-ha.demo@dxos.local` (nhân sự) và `admin.demo@dxos.local`. Hai script này chỉ chạy trên database local `dx_os`, không áp dụng cho bộ Docker demo cổng 8090. Bộ đánh giá 40 câu (chọn công cụ, số liệu, lộ dữ liệu, xưng hô, ngày tháng):
+Phân quyền demo giữ đúng [ma trận nghiệp vụ](docs/architecture/demo-business-permissions.md): An (kinh doanh, 13 quyền), Minh Anh (kỹ thuật, 13 quyền), Nam (kho vận, 12 quyền), Hà (nhân sự, 32 quyền). Chỉ admin và Minh Anh có `ai:use`; ba tài khoản còn lại phải bị từ chối trước khi gọi model. Không cấp thêm quyền duyệt chung, lương hoặc hồ sơ nhạy cảm để trình diễn AI. Với native, chạy `seed:demo-roles` sau `seed:demo`; Docker demo mới tự chạy seed role trong bước bootstrap. Seed giữ nguyên admin/password/tổ chức khác và dừng nếu gặp role hoặc assignment xung đột. `seed:demo-activity` vẫn là bước tùy chọn, chỉ áp dụng local. Bộ đánh giá đã cập nhật theo ma trận này, gồm cả trường hợp phải trả 403:
 
 ```powershell
 npm --workspace @dx-os/backend run ai:eval   # mock; đặt các biến AI_* ở trên để chạy trên model thật
 ```
+
+Để kiểm thử mock mà không đụng dữ liệu demo đang dùng, đặt `DATABASE_URL` của MySQL local trong môi trường riêng và chạy `npm --workspace @dx-os/backend run test:rbac:mysql -- --testRegex 'ai-agent[.]eval[.]ts$'`. Runner tạo/hủy database tạm; role/data/password test được tạo riêng, không nới quyền trên `dx_os`.
+
+`numericCheck=PASS` chỉ cho biết các con số đã xuất hiện trong ngữ cảnh, chưa xác minh đúng đối tượng/đơn vị/ý nghĩa; kiểm tra bản ghi qua nguồn dẫn. Ollama Cloud có credit/hạn mức theo [gói sử dụng](https://ollama.com/pricing), không cam kết gpt-oss:120b miễn phí không giới hạn.
 
 Kết quả gần nhất ở [phụ lục C của spec](docs/architecture/ai-agent-v1-spec.md#phụ-lục-c-kết-quả-kiểm-thử-và-đánh-giá-25102026-máy-phát-triển).
 

@@ -38,6 +38,8 @@ jobs:
       - run: npm run db:generate && npm run db:validate
       - run: npm run lint:backend
       - run: npm run test:rbac:mysql --workspace @dx-os/backend -- --coverage
+      - name: Evaluate offline agent against the agreed roles in a separate disposable database
+        run: npm run test:rbac:mysql --workspace @dx-os/backend -- --testRegex 'ai-agent[.]eval[.]ts$'
       - run: npm run build:backend
       - run: node backend/scripts/test-oidc-protocol.js
       - run: node backend/scripts/audit-licenses.js --strict
@@ -124,7 +126,9 @@ jobs:
         working-directory: ${{ runner.temp }}/dxos-release-source
         run: |
           mkdir -p security-artifacts
-          mysql_image=$(docker compose -p dxos-ci-demo --env-file .secrets/demo/compose.env -f backend/deploy/compose.demo.yml images -q mysql)
+          mysql_container=$(docker compose -p dxos-ci-demo --env-file .secrets/demo/compose.env -f backend/deploy/compose.demo.yml ps -q mysql)
+          mysql_image=$(docker inspect --format '{{.Image}}' "$mysql_container")
+          test "${mysql_image#sha256:}" != "$mysql_image"
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock:ro -v "$PWD/security-artifacts:/out" aquasec/trivy:0.76.0 image --timeout 15m --scanners vuln --format json --output /out/demo-mysql-vulnerabilities.json --severity HIGH,CRITICAL --exit-code 1 "$mysql_image"
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock:ro -v "$PWD/security-artifacts:/out" aquasec/trivy:0.76.0 image --timeout 15m --format cyclonedx --output /out/demo-mysql.cdx.json "$mysql_image"
       - name: Safe startup diagnostics

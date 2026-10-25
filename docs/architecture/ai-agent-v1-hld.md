@@ -1,9 +1,11 @@
 # High-Level Design: Agent hỏi đáp chỉ đọc trên model open-weight (DXOS-AI-003)
 
+**Bổ sung 26/10/2026:** cấu hình role demo phải theo [ma trận nghiệp vụ hiện tại](demo-business-permissions.md), thay cho nhóm employee/manager/HR rộng của thiết kế ban đầu. Eval chạy được trên MySQL disposable và kiểm cả trường hợp 403, không nới quyền trên database người dùng. Numeric PASS không xác minh đúng ngữ nghĩa của câu trả lời.
+
 | Mục | Giá trị |
 | --- | --- |
 | Tài liệu | High-Level Design (HLD) — phiên bản 0.3, 25/10/2026 (khớp spec v0.4) |
-| Trạng thái | Đã triển khai local (chưa commit); kết quả kiểm thử ở spec phụ lục C |
+| Trạng thái | Implementation ở PR #23; hardening trên nhánh `fix/ai-agent-hardening`. CI/merge được xác nhận riêng trên GitHub |
 | Owner | Khánh |
 | Spec chi tiết | [ai-agent-v1-spec.md](ai-agent-v1-spec.md) (user stories, acceptance criteria, schema công cụ, cấu hình) |
 | Liên quan | [ai-foundation.md](ai-foundation.md), [contracts/api/ai.md](../../contracts/api/ai.md), [rbac.md](rbac.md) |

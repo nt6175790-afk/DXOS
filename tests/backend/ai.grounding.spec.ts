@@ -12,6 +12,11 @@ describe('numeric grounding check', () => {
     expect(numericCheck('Có 7 phòng ban, 5 đang hoạt động.', [tool({ total: 5 })], [])).toEqual({ status: 'WARN', unmatchedCount: 1 });
   });
 
+  it('reports only number presence, never semantic correctness of a claim', () => {
+    // Ten tasks does not imply ten employees. The UI/API documentation must not present PASS as fact verification.
+    expect(numericCheck('Có 10 nhân viên.', [tool({ tasks: 10 })], [])).toEqual({ status: 'PASS', unmatchedCount: 0 });
+  });
+
   it.each([
     ['Vietnamese thousands', '1.284 nhân viên', { total: 1284 }],
     ['Vietnamese decimal comma', 'tỷ lệ 12,5%', { result: 12.5 }],

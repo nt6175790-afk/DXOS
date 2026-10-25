@@ -662,10 +662,23 @@ describe('AiAssistantPage (DXOS-FRONTEND-006)', () => {
     expect(screen.getByRole('link', { name: 'Báo cáo Q3' })).toHaveAttribute('href', '/tasks/7c9e6679-7425-40de-944b-e07fc1f90ae7');
     expect(screen.queryByText('Trang ngoài')).not.toBeInTheDocument();
     expect(screen.getByTestId('ai-numeric-warning')).toHaveTextContent(/chưa đối chiếu được/);
+    expect(screen.getByTestId('ai-numeric-scope')).toHaveTextContent(/chỉ đối chiếu sự xuất hiện/i);
     expect(screen.getByTestId('ai-tool-limit-note')).toBeInTheDocument();
   });
 
   // 24. Suggestions follow permissions
+  it('does not present a numeric PASS as verification of the meaning of an answer', async () => {
+    mockGenerateAi.mockResolvedValueOnce({ id: 'presence', organizationId: 'org-1', requestId: 'presence', provider: 'mock', model: 'mock-v1',
+      text: 'Có 10 nhân viên.', finishReason: 'stop', usage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
+      numericCheck: { status: 'PASS', unmatchedCount: 0 }, citations: [] });
+    render(<MemoryRouter><ToastProvider><AiAssistantPage /></ToastProvider></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Tình hình nhân sự?');
+    await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+    expect(await screen.findByTestId('ai-numeric-scope')).toHaveTextContent(/kiểm tra ý nghĩa tại nguồn/);
+    expect(screen.queryByTestId('ai-numeric-warning')).not.toBeInTheDocument();
+  });
+
   it('24. only suggests questions the user has permission to ask', async () => {
     const { unmount } = renderPage();
     await screen.findByText('mock:mock-v1');
