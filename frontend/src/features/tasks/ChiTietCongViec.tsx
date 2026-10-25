@@ -350,7 +350,7 @@ function TaskDetailContent() {
 
   // Status transitions
   const handleStatusChange = async (newStatus: TaskStatus) => {
-    if (!orgId || !task || isTerminal) return;
+    if (!orgId || !task || isTerminal || !canUpdate) return;
     try {
       const payload: UpdateTaskRequest = { status: newStatus };
       if (newStatus === 'IN_PROGRESS' && task.status === 'TODO' && progressInput > 0) {
@@ -374,7 +374,7 @@ function TaskDetailContent() {
 
   // Save Progress
   const handleSaveProgress = async () => {
-    if (!orgId || !task || isTerminal) return;
+    if (!orgId || !task || isTerminal || !canUpdate) return;
     setIsUpdatingProgress(true);
     try {
       const payload: UpdateTaskRequest = { progressPercent: progressInput };
@@ -457,7 +457,7 @@ function TaskDetailContent() {
   // Unlink attachment
   const handleUnlinkAttachment = async (attachmentId: string) => {
     if (!orgId || !task || isTerminal || !canUpdate || !canReadFile) return;
-    if (!window.confirm('Bạn có chắc chắn muốn gỡ liên kết tài liệu này khỏi công việc không? (Tệp tin gốc trong Files vẫn được giữ nguyên)')) {
+    if (!window.confirm('Gỡ tài liệu khỏi công việc? Tệp vẫn còn trong kho tài liệu.')) {
       return;
     }
 
@@ -516,7 +516,7 @@ function TaskDetailContent() {
 
   // Perform Attach
   const handlePerformAttach = async () => {
-    if (!orgId || !task || isTerminal) return;
+    if (!orgId || !task || isTerminal || !canUpdate || !canReadFile || (attachTab === 'upload' && !canUploadFile)) return;
 
     if (attachTab === 'select') {
       if (!selectedFileId) {
@@ -577,7 +577,7 @@ function TaskDetailContent() {
         showToast('Tải lên và đính kèm tài liệu thành công', 'success');
       } catch (linkErr) {
         showToast(
-          'Tệp đã được tải lên danh sách Files chung, nhưng chưa thể liên kết vào công việc. Bạn có thể chọn tệp này trong danh sách để liên kết lại.',
+          'Tệp đã lưu trong kho tài liệu. Chọn lại tệp để đính kèm vào công việc.',
           'error'
         );
         // Retain uploaded file and switch tab to select
@@ -607,11 +607,12 @@ function TaskDetailContent() {
   };
 
   const handleEditSave = async () => {
-    if (!orgId || !task || isTerminal) return;
+    if (!orgId || !task || isTerminal || (!canUpdate && !canAssign) || isSaving) return;
     setIsSaving(true);
     setEditErrors({});
     try {
       const data: UpdateTaskRequest = {};
+      if (canUpdate) {
       if (editData.title.trim() !== task.title) data.title = editData.title.trim();
       if ((editData.description.trim() || null) !== task.description) {
         data.description = editData.description.trim() || null;
@@ -626,6 +627,7 @@ function TaskDetailContent() {
       }
       if ((editData.departmentId || null) !== task.departmentId) {
         data.departmentId = editData.departmentId || null;
+      }
       }
       if (canAssign && (editData.assigneeEmployeeId || null) !== task.assigneeEmployeeId) {
         data.assigneeEmployeeId = editData.assigneeEmployeeId || null;
@@ -905,7 +907,7 @@ function TaskDetailContent() {
                 </div>
               </form>
             ) : (
-              <p className="text-xs text-slate-500 italic py-1">Bạn không có quyền thêm bình luận (cần task:update).</p>
+              <p className="text-xs text-slate-500 italic py-1">Bạn chỉ có quyền xem bình luận.</p>
             )}
           </div>
         </div>
@@ -933,7 +935,7 @@ function TaskDetailContent() {
           <div className="flex-1 overflow-y-auto space-y-2.5 min-h-[160px] max-h-[380px] pr-1">
             {!canReadFile ? (
               <div className="py-8 text-center text-slate-400 text-sm">
-                Bạn không có quyền xem tài liệu đính kèm (cần file:read).
+                Bạn không có quyền xem tài liệu đính kèm.
               </div>
             ) : isLoadingAttachments ? (
               <div className="py-8 text-center text-slate-400 text-sm">Đang tải tài liệu...</div>
@@ -1021,6 +1023,7 @@ function TaskDetailContent() {
         <FormField label="Tiêu đề công việc" htmlFor="edit-title" required>
           <input
             id="edit-title"
+            disabled={!canUpdate}
             className="input-field"
             value={editData.title}
             onChange={(e) => setEditData({ ...editData, title: e.target.value })}
@@ -1030,6 +1033,7 @@ function TaskDetailContent() {
         <FormField label="Mô tả" htmlFor="edit-desc">
           <textarea
             id="edit-desc"
+            disabled={!canUpdate}
             className="input-field min-h-[100px]"
             value={editData.description}
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
@@ -1040,6 +1044,7 @@ function TaskDetailContent() {
           <FormField label="Trạng thái" htmlFor="edit-status">
             <select
               id="edit-status"
+              disabled={!canUpdate}
               className="input-field"
               value={editData.status}
               onChange={(e) => {
@@ -1066,12 +1071,13 @@ function TaskDetailContent() {
               className="input-field"
               value={editData.progressPercent}
               onChange={(e) => setEditData({ ...editData, progressPercent: parseInt(e.target.value || '0', 10) })}
-              disabled={editData.status === 'DONE' || editData.status === 'TODO'}
+              disabled={!canUpdate || editData.status === 'DONE' || editData.status === 'TODO'}
             />
           </FormField>
           <FormField label="Độ ưu tiên" htmlFor="edit-priority">
             <select
               id="edit-priority"
+              disabled={!canUpdate}
               className="input-field"
               value={editData.priority}
               onChange={(e) => setEditData({ ...editData, priority: e.target.value as TaskPriority })}
@@ -1087,6 +1093,7 @@ function TaskDetailContent() {
           <FormField label="Hạn hoàn thành" htmlFor="edit-due">
             <input
               id="edit-due"
+              disabled={!canUpdate}
               type="datetime-local"
               className="input-field"
               value={editData.dueAt}
@@ -1096,11 +1103,13 @@ function TaskDetailContent() {
           <FormField label="Phòng ban" htmlFor="edit-dept">
             <select
               id="edit-dept"
+              disabled={!canUpdate}
               className="input-field"
               value={editData.departmentId}
               onChange={(e) => setEditData({ ...editData, departmentId: e.target.value })}
             >
               <option value="">Không có</option>
+              {editData.departmentId && !departments.some((department) => department.id === editData.departmentId) && <option value={editData.departmentId}>Phòng ban hiện tại</option>}
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -1108,14 +1117,16 @@ function TaskDetailContent() {
               ))}
             </select>
           </FormField>
-          <FormField label="Người phụ trách" htmlFor="edit-assignee" hint="Yêu cầu quyền task:assign">
+          <FormField label="Người phụ trách" htmlFor="edit-assignee" hint={canAssign && !canReadEmp ? 'Cần quyền xem nhân sự để chọn người khác.' : undefined}>
             <select
               id="edit-assignee"
+              disabled={!canAssign}
               className="input-field"
               value={editData.assigneeEmployeeId}
               onChange={(e) => setEditData({ ...editData, assigneeEmployeeId: e.target.value })}
             >
               <option value="">Chưa phân công</option>
+              {editData.assigneeEmployeeId && !employees.some((employee) => employee.id === editData.assigneeEmployeeId) && <option value={editData.assigneeEmployeeId}>Người phụ trách hiện tại</option>}
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.displayName}
@@ -1221,7 +1232,7 @@ function TaskDetailContent() {
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-slate-500">
-                Tệp tin tải lên sẽ được lưu vào kho tài liệu dùng chung của tổ chức và tự động đính kèm vào công việc
+                Tệp được lưu vào kho tài liệu và đính kèm vào công việc.
                 này. Định dạng cho phép: PDF, PNG, JPEG (tối đa 5 MB).
               </p>
               <div className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-center">

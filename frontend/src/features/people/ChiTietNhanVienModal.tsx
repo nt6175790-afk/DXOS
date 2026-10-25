@@ -25,6 +25,7 @@ import { CompensationCard } from '@/features/payroll/CompensationCard';
 import { PerformanceProfileCard } from './PerformanceProfileCard';
 import { EmployeeDocumentsCard } from '@/features/documents/EmployeeDocumentsCard';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { usePermission } from '@/hooks/usePermission';
 import { format } from 'date-fns';
 import type { Employee, Department, Task } from '@/api/types';
 
@@ -46,6 +47,9 @@ export function EmployeeDetailModal({
   canEdit,
 }: EmployeeDetailModalProps) {
   const { currentOrg } = useOrganization();
+  const { hasPermission } = usePermission();
+  const canReadTasks = hasPermission('task:read');
+  const canReadSchedules = hasPermission('schedule:read');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
@@ -58,8 +62,10 @@ export function EmployeeDetailModal({
       return;
     }
     let isCancelled = false;
-    setIsLoadingTasks(true);
-    listTasks(orgId, { assigneeEmployeeId: employee.id, limit: 50 })
+    setTasks([]);
+    setSchedules([]);
+    setIsLoadingTasks(canReadTasks);
+    if (canReadTasks) listTasks(orgId, { assigneeEmployeeId: employee.id, limit: 50 })
       .then((res) => {
         if (!isCancelled) setTasks(res.items);
       })
@@ -70,7 +76,7 @@ export function EmployeeDetailModal({
         if (!isCancelled) setIsLoadingTasks(false);
       });
 
-    getEmployeeSchedule(orgId, employee.id)
+    if (canReadSchedules) getEmployeeSchedule(orgId, employee.id)
       .then((res) => {
         if (!isCancelled) setSchedules(res);
       })
@@ -81,7 +87,7 @@ export function EmployeeDetailModal({
     return () => {
       isCancelled = true;
     };
-  }, [open, employee, orgId]);
+  }, [open, employee, orgId, canReadTasks, canReadSchedules]);
 
   if (!employee) return null;
   const dept = departments.find((d) => d.id === employee.departmentId);
@@ -214,7 +220,7 @@ export function EmployeeDetailModal({
             </div>
           </div>
 
-          <div className="card p-4 space-y-3">
+          {canReadTasks && <div className="card p-4 space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Tổng quan Công việc
             </h4>
@@ -236,7 +242,7 @@ export function EmployeeDetailModal({
               <span>Tổng số công việc được phân công:</span>
               <span className="font-bold text-slate-800">{tasks.length}</span>
             </div>
-          </div>
+          </div>}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -273,7 +279,7 @@ export function EmployeeDetailModal({
           </div>
         </div>
 
-        <div className="card p-4 space-y-3">
+        {canReadTasks && <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Công việc gần đây
@@ -314,9 +320,9 @@ export function EmployeeDetailModal({
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
-        <div className="card p-4 space-y-3">
+        {canReadSchedules && <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-brand-600" />
@@ -366,11 +372,11 @@ export function EmployeeDetailModal({
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
-        <CompensationCard employeeId={employee.id} canManage={canEdit} />
-        <PerformanceProfileCard employeeId={employee.id} />
-        <EmployeeDocumentsCard employeeId={employee.id} canManage={canEdit} />
+        {hasPermission('compensation:read') && <CompensationCard employeeId={employee.id} canManage={hasPermission('compensation:create')} />}
+        {hasPermission('performance:read') && <PerformanceProfileCard employeeId={employee.id} />}
+        {hasPermission('document:read') && <EmployeeDocumentsCard employeeId={employee.id} canManage={hasPermission('document:create') && hasPermission('file:upload')} />}
       </div>
     </Modal>
   );

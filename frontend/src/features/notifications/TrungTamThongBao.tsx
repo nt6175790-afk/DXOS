@@ -26,11 +26,18 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Pagination } from '@/components/ui/Pagination';
 import { useToast } from '@/contexts/ToastContext';
+import { usePermission } from '@/hooks/usePermission';
 import type { Notification, ApiError, NotificationSummary } from '@/api/types';
 import { format } from 'date-fns';
 
 export function NotificationsPage() {
   const { currentOrg } = useOrganization();
+  return <NotificationsContent key={currentOrg?.id ?? 'no-organization'} />;
+}
+
+function NotificationsContent() {
+  const { currentOrg } = useOrganization();
+  const { hasPermission } = usePermission();
   const { showToast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [summary, setSummary] = useState<NotificationSummary | null>(null);
@@ -112,7 +119,7 @@ export function NotificationsPage() {
   };
 
   const getLink = (notif: Notification) => {
-    if (notif.type === 'task.assigned' && notif.metadata?.taskId) return `/tasks/${notif.metadata.taskId}`;
+    if (hasPermission('task:read') && notif.type === 'task.assigned' && notif.metadata?.taskId) return `/tasks/${notif.metadata.taskId}`;
     return null;
   };
 

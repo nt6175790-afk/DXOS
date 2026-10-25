@@ -203,7 +203,7 @@ describe('DXOS-FRONTEND-005: Real Organization Role Catalog Tests', () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText(/yêu cầu quyền role:read/i)).toBeInTheDocument();
+      expect(screen.getByText(/Bạn không có quyền xem thành viên tổ chức/i)).toBeInTheDocument();
     });
 
     expect(rolesSpy).not.toHaveBeenCalled();

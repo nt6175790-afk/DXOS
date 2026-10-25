@@ -30,9 +30,11 @@ export function ApprovalsPage() {
 
   const canRead = hasPermission('approval:read');
   const canCreate = hasPermission('approval:create');
-  const canApprove = hasPermission('approval:approve') || hasPermission('approval:manage') || hasPermission('leave:approve') || hasPermission('attendance:manage');
+  const canApprove = hasPermission('approval:approve');
+  const canReview = canApprove || hasPermission('approval:reject');
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'my' | 'all'>('pending');
+  const [selectedTab, setActiveTab] = useState<'pending' | 'my' | 'all' | null>(null);
+  const activeTab = selectedTab ?? (canReview ? 'pending' : 'my');
   const [items, setItems] = useState<ApprovalRequest[]>([]);
   const [summary, setSummary] = useState<ApprovalSummary>({
     pendingCount: 0,
@@ -137,7 +139,7 @@ export function ApprovalsPage() {
             Quản lý Phê duyệt
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Trung tâm xử lý tập trung các yêu cầu nghỉ phép và điều chỉnh chấm công doanh nghiệp
+            Theo dõi và xử lý yêu cầu nghỉ phép, chấm công và bảng lương.
           </p>
         </div>
 
@@ -199,7 +201,7 @@ export function ApprovalsPage() {
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {/* Tabs */}
         <div className="border-b border-slate-200 px-6 pt-4 flex items-center gap-6">
-          {canApprove && (
+          {canReview && (
             <button
               onClick={() => setActiveTab('pending')}
               className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
@@ -313,7 +315,7 @@ export function ApprovalsPage() {
             <h3 className="text-base font-semibold text-slate-800">Không có yêu cầu nào</h3>
             <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
               {activeTab === 'pending'
-                ? 'Tuyệt vời! Hiện tại không có yêu cầu nào đang chờ bạn phê duyệt.'
+                ? 'Không có yêu cầu đang chờ duyệt.'
                 : 'Chưa có dữ liệu yêu cầu phê duyệt phù hợp với bộ lọc.'}
             </p>
           </div>

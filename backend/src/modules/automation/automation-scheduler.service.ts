@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AutomationEngineService } from './automation-engine.service';
 import { AUTOMATION_TRIGGERS } from './automation.types';
+import { AuthorizationService } from '../rbac/authorization.service';
+import { PERMISSIONS } from '../rbac/permission-catalog';
 
 @Injectable()
 export class AutomationSchedulerService {
@@ -10,9 +12,22 @@ export class AutomationSchedulerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly engine: AutomationEngineService,
+    private readonly authorization: AuthorizationService,
   ) {}
 
   async runScan(organizationId: string, actorId: string, specificTrigger?: string) {
+    if (!(await this.authorization.can(actorId, PERMISSIONS.AUTOMATION_MANAGE, organizationId))) {
+      throw new ForbiddenException();
+    }
+    return this.scan(organizationId, actorId, specificTrigger);
+  }
+
+  // Trusted background entry point; HTTP calls must use runScan with an authenticated actor.
+  async runScheduledScan(organizationId: string, specificTrigger?: string) {
+    return this.scan(organizationId, 'system', specificTrigger);
+  }
+
+  private async scan(organizationId: string, actorId: string, specificTrigger?: string) {
     const summary = {
       scannedAt: new Date(),
       triggersFired: 0,

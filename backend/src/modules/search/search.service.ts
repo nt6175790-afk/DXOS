@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { fileVisibility } from '../files/file-visibility';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthorizationService } from '../rbac/authorization.service';
@@ -51,7 +52,7 @@ export class SearchService {
       case 'employees': return (await tx.employee.findMany({ where: { ...scope, OR: [{ displayName: { contains } }, { employeeCode: { contains } }] },
         select: { id: true, displayName: true, employeeCode: true }, ...page })).map((row) => ({ id: row.id, title: row.displayName, subtitle: row.employeeCode }));
       case 'tasks': return (await tx.task.findMany({ where: { ...scope, title: { contains } }, select: { id: true, title: true }, ...page })).map((row) => ({ ...row, subtitle: null }));
-      case 'documents': return (await tx.fileObject.findMany({ where: { ...scope, status: 'AVAILABLE', originalFilename: { contains } },
+      case 'documents': return (await tx.fileObject.findMany({ where: { ...scope, ...await fileVisibility(this.authorization, tx, actorId, organizationId), status: 'AVAILABLE', originalFilename: { contains } },
         select: { id: true, originalFilename: true, contentType: true }, ...page })).map((row) => ({ id: row.id, title: row.originalFilename, subtitle: row.contentType }));
       case 'departments': return (await tx.department.findMany({ where: { ...scope, OR: [{ name: { contains } }, { code: { contains } }] },
         select: { id: true, name: true, code: true }, ...page })).map((row) => ({ id: row.id, title: row.name, subtitle: row.code }));

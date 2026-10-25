@@ -28,7 +28,7 @@ export function PayrollPage() {
   const { hasPermission } = usePermission();
   const orgId = currentOrg?.id || '';
 
-  const canManage = hasPermission('payroll:manage') || hasPermission('payroll:create');
+  const canManage = hasPermission('payroll:create');
 
   const [activeTab, setActiveTab] = useState<TabKey>('periods');
   const [periods, setPeriods] = useState<PayrollPeriod[]>([]);

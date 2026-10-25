@@ -452,4 +452,51 @@ mysqlDescribe('Documents & HR Compliance Integration & RBAC (TASK 9)', () => {
       expect([403, 404]).toContain(foreignRes.status);
     });
   });
+  describe('document permission regressions', () => {
+    async function sensitiveDocument(employeeId: string) {
+      const file = await createTestFile('private-personnel.pdf');
+      const result = await http().post(orgBase() + '/documents').set('Authorization', 'Bearer ' + adminToken)
+        .send({ employeeId, title: 'Private personnel', category: DocumentCategory.IDENTIFICATION,
+          sensitivity: DocumentSensitivity.SENSITIVE, fileId: file.id }).expect(201);
+      return { document: result.body, file };
+    }
+    it('does not let an update-only operator downgrade another employee sensitive document', async () => {
+      const hidden = await sensitiveDocument(adminEmp);
+      const role = await db.role.findUniqueOrThrow({ where: { organizationId_key: { organizationId: org, key: 'employee' } } });
+      const permission = await db.permission.findUniqueOrThrow({ where: { key: 'document:update' } });
+      await db.rolePermission.create({ data: { roleId: role.id, permissionId: permission.id } });
+      await http().patch(orgBase() + '/documents/' + hidden.document.id).set('Authorization', 'Bearer ' + employeeToken)
+        .send({ sensitivity: DocumentSensitivity.NORMAL }).expect(403);
+      expect((await db.employeeDocument.findUniqueOrThrow({ where: { id: hidden.document.id } })).sensitivity).toBe('SENSITIVE');
+    });
+    it('keeps explicit SENSITIVE searches scoped to the owner without sensitive-read', async () => {
+      const foreign = await sensitiveDocument(adminEmp);
+      const own = await sensitiveDocument(employeeEmp);
+      const result = await http().get(orgBase() + '/documents?sensitivity=SENSITIVE')
+        .set('Authorization', 'Bearer ' + employeeToken).expect(200);
+      expect(result.body.items.map((d: { id: string }) => d.id)).toContain(own.document.id);
+      expect(result.body.items.map((d: { id: string }) => d.id)).not.toContain(foreign.document.id);
+    });
+    it.each(['INACTIVE', 'SUSPENDED', 'REMOVED'] as const)('rejects own-document access for %s membership', async status => {
+      const own = await sensitiveDocument(employeeEmp);
+      await db.organizationMembership.update({ where: { organizationId_userId: { organizationId: org, userId: employeeUser } }, data: { status } });
+      for (const suffix of ['/documents', '/documents/' + own.document.id, '/documents/' + own.document.id + '/download', '/compliance/employees/' + employeeEmp]) {
+        await http().get(orgBase() + suffix).set('Authorization', 'Bearer ' + employeeToken).expect(403);
+      }
+      await http().post(orgBase() + '/documents').set('Authorization', 'Bearer ' + employeeToken)
+        .send({ employeeId: employeeEmp, title: 'Blocked', category: DocumentCategory.IDENTIFICATION, fileId: own.file.id }).expect(403);
+    });
+    it('does not expose another employee sensitive attachment through the generic file catalog or download', async () => {
+      const hidden = await sensitiveDocument(adminEmp);
+      const own = await sensitiveDocument(employeeEmp);
+      const role = await db.role.findUniqueOrThrow({ where: { organizationId_key: { organizationId: org, key: 'employee' } } });
+      const permission = await db.permission.upsert({ where: { key: 'file:read' }, update: {}, create: { key: 'file:read', name: 'Read files' } });
+      await db.rolePermission.create({ data: { roleId: role.id, permissionId: permission.id } });
+      const result = await http().get(orgBase() + '/files').set('Authorization', 'Bearer ' + employeeToken).expect(200);
+      expect(result.body.items.map((f: { id: string }) => f.id)).not.toContain(hidden.file.id);
+      expect(result.body.items.map((f: { id: string }) => f.id)).toContain(own.file.id);
+      await http().get(orgBase() + '/files/' + hidden.file.id + '/content').set('Authorization', 'Bearer ' + employeeToken).expect(403);
+      await http().get(orgBase() + '/files/' + own.file.id + '/content').set('Authorization', 'Bearer ' + employeeToken).expect(200);
+    });
+  });
 });

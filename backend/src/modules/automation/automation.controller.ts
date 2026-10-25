@@ -13,6 +13,9 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedRequestContext } from '../auth/auth.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationContext } from '../rbac/decorators/organization-context.decorator';
+import { RequirePermission } from '../rbac/decorators/require-permission.decorator';
+import { OrganizationPermissionGuard } from '../rbac/guards/organization-permission.guard';
+import { PERMISSIONS } from '../rbac/permission-catalog';
 import { AutomationRuleService } from './automation-rule.service';
 import { AutomationEngineService } from './automation-engine.service';
 import { AutomationSchedulerService } from './automation-scheduler.service';
@@ -88,15 +91,19 @@ export class AutomationController {
   }
 
   @Get('executions')
+  @UseGuards(OrganizationPermissionGuard)
+  @RequirePermission(PERMISSIONS.AUTOMATION_READ)
   listExecutions(
     @CurrentUser() caller: AuthenticatedRequestContext,
     @Param('organizationId') orgId: string,
     @Query('limit') limit?: number,
   ) {
-    return this.engineService.listExecutions(orgId, limit);
+    return this.engineService.listExecutions(caller.user.id, orgId, limit);
   }
 
   @Post('run')
+  @UseGuards(OrganizationPermissionGuard)
+  @RequirePermission(PERMISSIONS.AUTOMATION_MANAGE)
   runScan(
     @CurrentUser() caller: AuthenticatedRequestContext,
     @Param('organizationId') orgId: string,

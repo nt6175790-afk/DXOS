@@ -14,6 +14,7 @@ import { AuditService } from '../audit/audit.service';
 import { AUDIT_EVENTS } from '../audit/audit-catalog';
 import { AuthorizationService } from '../rbac/authorization.service';
 import { PERMISSIONS } from '../rbac/permission-catalog';
+import { fileVisibility } from '../files/file-visibility';
 import { StorageService } from '../files/storage.service';
 import {
   CreateDocumentDto,
@@ -35,6 +36,10 @@ export class DocumentsService {
     return this.authorization.can(userId, PERMISSIONS.DOCUMENT_SENSITIVE_READ, orgId, tx);
   }
 
+  private async assertActiveMember(userId: string, orgId: string, tx: Prisma.TransactionClient) {
+    if (!(await this.authorization.isActiveMember(userId, orgId, tx))) throw new ForbiddenException();
+  }
+
   private async getCallerEmployee(userId: string, orgId: string, tx: Prisma.TransactionClient) {
     return tx.employee.findFirst({
       where: { organizationId: orgId, userId, status: 'ACTIVE' },
@@ -42,8 +47,14 @@ export class DocumentsService {
     });
   }
 
+  private async assertSensitiveMutation(userId: string, orgId: string, doc: { employeeId: string; sensitivity: string }, tx: Prisma.TransactionClient) {
+    if (doc.sensitivity !== 'SENSITIVE') return;
+    const owner = await this.getCallerEmployee(userId, orgId, tx);
+    if (owner?.id !== doc.employeeId && !(await this.canAccessSensitive(userId, orgId, tx))) throw new ForbiddenException();
+  }
   async list(userId: string, orgId: string, query: DocumentQueryDto) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const canRead = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_READ, orgId, tx);
       const callerEmp = await this.getCallerEmployee(userId, orgId, tx);
 
@@ -80,6 +91,7 @@ export class DocumentsService {
           if (!callerEmp || (where.employeeId && where.employeeId !== callerEmp.id)) {
             throw new ForbiddenException('Lacks permission to view sensitive documents');
           }
+          where.employeeId = callerEmp.id;
         }
         where.sensitivity = query.sensitivity;
       } else if (!hasSensitiveAccess) {
@@ -176,6 +188,7 @@ export class DocumentsService {
 
   async getById(userId: string, orgId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const doc = await tx.employeeDocument.findFirst({
         where: { id, organizationId: orgId, deletedAt: null },
         include: {
@@ -209,6 +222,7 @@ export class DocumentsService {
       });
 
       if (!doc) throw new NotFoundException('Document not found');
+      await this.assertSensitiveMutation(userId, orgId, doc, tx);
 
       const canRead = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_READ, orgId, tx);
       const callerEmp = await this.getCallerEmployee(userId, orgId, tx);
@@ -231,6 +245,7 @@ export class DocumentsService {
 
   async create(userId: string, orgId: string, dto: CreateDocumentDto) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const canCreate = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_CREATE, orgId, tx);
       const callerEmp = await this.getCallerEmployee(userId, orgId, tx);
       const isSelf = callerEmp && callerEmp.id === dto.employeeId;
@@ -247,7 +262,7 @@ export class DocumentsService {
 
       // Check file exists in AVAILABLE state
       const file = await tx.fileObject.findFirst({
-        where: { id: dto.fileId, organizationId: orgId, status: 'AVAILABLE' },
+        where: { id: dto.fileId, organizationId: orgId, status: 'AVAILABLE', ...await fileVisibility(this.authorization, tx, userId, orgId) },
       });
       if (!file) throw new BadRequestException('File not found or not available');
 
@@ -300,10 +315,12 @@ export class DocumentsService {
 
   async createVersion(userId: string, orgId: string, id: string, dto: CreateDocumentVersionDto) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const doc = await tx.employeeDocument.findFirst({
         where: { id, organizationId: orgId, deletedAt: null },
       });
       if (!doc) throw new NotFoundException('Document not found');
+      await this.assertSensitiveMutation(userId, orgId, doc, tx);
 
       const canUpdate = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_UPDATE, orgId, tx);
       const callerEmp = await this.getCallerEmployee(userId, orgId, tx);
@@ -314,7 +331,7 @@ export class DocumentsService {
       }
 
       const file = await tx.fileObject.findFirst({
-        where: { id: dto.fileId, organizationId: orgId, status: 'AVAILABLE' },
+        where: { id: dto.fileId, organizationId: orgId, status: 'AVAILABLE', ...await fileVisibility(this.authorization, tx, userId, orgId) },
       });
       if (!file) throw new BadRequestException('File not found or not available');
 
@@ -361,6 +378,7 @@ export class DocumentsService {
 
   async update(userId: string, orgId: string, id: string, dto: UpdateDocumentDto) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const canUpdate = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_UPDATE, orgId, tx);
       if (!canUpdate) throw new ForbiddenException();
 
@@ -368,6 +386,7 @@ export class DocumentsService {
         where: { id, organizationId: orgId, deletedAt: null },
       });
       if (!doc) throw new NotFoundException('Document not found');
+      await this.assertSensitiveMutation(userId, orgId, doc, tx);
 
       const updated = await tx.employeeDocument.update({
         where: { id: doc.id },
@@ -399,6 +418,7 @@ export class DocumentsService {
 
   async archive(userId: string, orgId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const canUpdate = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_UPDATE, orgId, tx);
       if (!canUpdate) throw new ForbiddenException();
 
@@ -406,6 +426,7 @@ export class DocumentsService {
         where: { id, organizationId: orgId, deletedAt: null },
       });
       if (!doc) throw new NotFoundException('Document not found');
+      await this.assertSensitiveMutation(userId, orgId, doc, tx);
 
       const updated = await tx.employeeDocument.update({
         where: { id: doc.id },
@@ -428,6 +449,7 @@ export class DocumentsService {
 
   async restore(userId: string, orgId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const canUpdate = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_UPDATE, orgId, tx);
       if (!canUpdate) throw new ForbiddenException();
 
@@ -435,6 +457,7 @@ export class DocumentsService {
         where: { id, organizationId: orgId, deletedAt: null },
       });
       if (!doc) throw new NotFoundException('Document not found');
+      await this.assertSensitiveMutation(userId, orgId, doc, tx);
 
       const updated = await tx.employeeDocument.update({
         where: { id: doc.id },
@@ -457,6 +480,7 @@ export class DocumentsService {
 
   async remove(userId: string, orgId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const canDelete = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_DELETE, orgId, tx);
       if (!canDelete) throw new ForbiddenException();
 
@@ -464,6 +488,7 @@ export class DocumentsService {
         where: { id, organizationId: orgId, deletedAt: null },
       });
       if (!doc) throw new NotFoundException('Document not found');
+      await this.assertSensitiveMutation(userId, orgId, doc, tx);
 
       await tx.employeeDocument.update({
         where: { id: doc.id },
@@ -486,6 +511,7 @@ export class DocumentsService {
 
   async download(userId: string, orgId: string, documentId: string, versionId?: string) {
     const { version, file } = await this.prisma.$transaction(async (tx) => {
+      await this.assertActiveMember(userId, orgId, tx);
       const document = await tx.employeeDocument.findFirst({
         where: { id: documentId, organizationId: orgId, deletedAt: null },
       });

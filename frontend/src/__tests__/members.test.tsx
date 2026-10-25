@@ -591,7 +591,7 @@ describe('DXOS-FRONTEND-004: Members & Role Administration Tests', () => {
     renderComponent();
 
     expect(
-      screen.getByText(/Bạn không có quyền xem danh sách thành viên tổ chức này/i)
+      screen.getByText(/Bạn không có quyền xem thành viên tổ chức/i)
     ).toBeInTheDocument();
   });
 
