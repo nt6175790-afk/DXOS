@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { count } from './report-format';
 export function ReportChart({ title, points }: { title: string; points: { label: string; value: number }[] }) {
   if (!points.some((p) => p.value !== 0)) return <p className="py-8 text-center text-sm text-slate-500">Chưa có dữ liệu cho {title.toLowerCase()} trong khoảng đã chọn.</p>;

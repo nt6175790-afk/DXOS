@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // The one-shot container shares only the isolated demo MySQL network namespace.
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');

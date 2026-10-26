@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Consistent snapshots of only this task's Keycloak/OpenBao volumes before upgrade.
 const fs = require('node:fs');
 const path = require('node:path');

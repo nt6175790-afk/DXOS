@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ReportsPage } from '@/features/reports/BaoCaoPhanTich';
 import { ProtectedRoute } from '@/contexts/AuthContext';

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 name: DX-OS verification and security
 on:
   pull_request:
@@ -32,6 +34,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22.21.1", cache: npm, cache-dependency-path: "package-lock.json" }
       - run: npm ci
+      - run: node --test backend/scripts/check-source-licenses.test.js
+      - run: node backend/scripts/check-source-licenses.js
       - run: node --test backend/scripts/source-publication-policy.test.js
       - run: node --test backend/scripts/init-demo-env.test.js
       - run: node --test backend/scripts/check-adguard-artifact.test.js

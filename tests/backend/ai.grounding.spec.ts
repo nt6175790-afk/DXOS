@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { numericCheck } from '../../backend/src/modules/ai/agent/grounding';
 import { validatedAgentResult } from '../../backend/src/modules/ai/ai-validation';
 

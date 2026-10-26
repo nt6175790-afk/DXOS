@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Body, Controller, Get, Header, Headers, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { IsOptional, IsString, Length, Matches } from 'class-validator';
 import { SsoService } from './sso.service';

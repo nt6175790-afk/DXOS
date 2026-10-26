@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { X, User, Building, Calendar, DollarSign, FileText } from 'lucide-react';
 import type { PayrollRecord } from '@/api/types';
 

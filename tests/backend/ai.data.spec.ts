@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConfigService } from '@nestjs/config';
 import { AiDataService } from '../../backend/src/modules/ai/ai-data.service';
 import { GeminiAiProvider } from '../../backend/src/modules/ai/gemini-ai.provider';

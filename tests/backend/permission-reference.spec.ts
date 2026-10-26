@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PERMISSION_CATALOG } from '../../backend/src/modules/rbac/permission-catalog';

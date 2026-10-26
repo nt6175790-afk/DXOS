@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const categories = ['employees', 'tasks', 'documents', 'departments', 'notifications'];
 export const searchPaths = {

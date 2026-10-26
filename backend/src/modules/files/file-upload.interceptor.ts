@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { BadRequestException, CallHandler, ExecutionContext, Inject, Injectable } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { catchError } from 'rxjs';

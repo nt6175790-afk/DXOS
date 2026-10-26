@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { bucket, csvCell, makeCsv, money, rate, reportRange, trend } from '../../backend/src/modules/reports/report-calculations';
 import { ReportQueryDto } from '../../backend/src/modules/reports/reports.dto';
 describe('Report arithmetic, dates and spreadsheet encoding', () => {

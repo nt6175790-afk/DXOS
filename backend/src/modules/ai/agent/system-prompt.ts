@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { rangeView, resolveRange, type Period } from './period';
 import { formatVnDateTime, vnWeekday } from './vn-time';
 

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS build
 RUN apk upgrade --no-cache && apk add --no-cache openssl ca-certificates python3 make g++
 WORKDIR /app

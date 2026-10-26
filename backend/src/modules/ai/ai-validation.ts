@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { ApiErrorException } from '../../common/errors/api-error.exception';

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Add local SSO/scanning settings after validation. Existing passwords/JWT keys are preserved.
 const { readFileSync, writeFileSync, existsSync } = require('node:fs');
 const { resolve } = require('node:path');

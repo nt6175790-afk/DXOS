@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS gosu-build
 RUN apk add --no-cache git ca-certificates
 RUN git clone --depth 1 --branch 1.19 https://github.com/tianon/gosu.git /src \

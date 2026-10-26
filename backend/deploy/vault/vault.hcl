@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 ui = false
 api_addr = "https://openbao:8200"
 cluster_addr = "https://openbao:8201"

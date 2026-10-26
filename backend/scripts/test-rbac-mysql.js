@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Creates and removes ONLY uniquely named disposable databases for this run.
 const { randomBytes } = require('node:crypto');
 const { existsSync } = require('node:fs');

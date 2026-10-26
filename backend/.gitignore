@@ -1,2 +1,4 @@
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 # Keep the Work domain source despite the root workspace-artifact ignore.
 !src/modules/work/

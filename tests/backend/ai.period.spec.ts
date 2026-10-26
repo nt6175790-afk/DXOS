@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { previousRange, resolveRange, vnToday } from '../../backend/src/modules/ai/agent/period';
 import { ToolArgumentError } from '../../backend/src/modules/ai/tools/tool.types';
 

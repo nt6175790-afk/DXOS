@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { AuditService, type AuditInput } from '../../backend/src/modules/audit/audit.service';
 import { AUDIT_EVENTS } from '../../backend/src/modules/audit/audit-catalog';
 import type { PrismaService } from '../../backend/src/database/prisma.service';

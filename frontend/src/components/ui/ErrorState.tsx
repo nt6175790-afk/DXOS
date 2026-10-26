@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { AlertTriangle } from 'lucide-react';
 import type { ApiError } from '@/api/types';
 

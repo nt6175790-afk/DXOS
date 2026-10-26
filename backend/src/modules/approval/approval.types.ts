@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Prisma } from '@prisma/client';
 import { approvalProjection } from './approval.constants';
 

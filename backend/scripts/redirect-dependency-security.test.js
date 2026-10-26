@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Exercise the installed frontend dependency against two loopback HTTP origins.
 // All header values are synthetic test data; no operator credential is loaded.
 const test = require('node:test');

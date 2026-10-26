@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ThemeContext, ThemeMode, SeasonMode, ResolvedSeason, ResolvedTheme, getAutoSeason } from './theme-context';
 import React, { useEffect, useState, useMemo } from 'react';
 

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { api } from './client';
 import type { PaginatedResponse, PaginationParams } from './types';
 import type { Shift } from './shifts';

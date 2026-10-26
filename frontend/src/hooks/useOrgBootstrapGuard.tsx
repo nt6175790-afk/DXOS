@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import type { ReactElement } from 'react';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { LoadingState } from '@/components/ui/LoadingState';

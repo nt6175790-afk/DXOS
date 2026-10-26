@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Reuse the existing seed; container diagnostics expose only error names/codes.
 import { DemoSeedError, seedDemoDataset } from './demo/seed-demo-dataset';
 

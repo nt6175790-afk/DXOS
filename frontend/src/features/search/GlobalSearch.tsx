@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, ArrowUpRight, CheckSquare, Calendar, Bell, Sparkles, Folder, Users } from 'lucide-react';

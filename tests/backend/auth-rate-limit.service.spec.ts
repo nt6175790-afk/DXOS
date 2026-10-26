@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { HttpStatus } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import {

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DemoSeedError, seedDemoDataset } from './demo/seed-demo-dataset';

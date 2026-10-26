@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 /** Vietnam has no daylight saving time: local time is always UTC+7. */
 export const VN_OFFSET_MS = 7 * 3_600_000;
 export const DAY_MS = 86_400_000;

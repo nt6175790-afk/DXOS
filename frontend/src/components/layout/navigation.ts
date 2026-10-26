@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import type { Permission } from '@/api/types';
 
 // Display policy only. Every API continues to authorize on the server.

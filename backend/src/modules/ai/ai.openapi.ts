@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { AI_PROVIDERS } from '../../config/environment';
 import { AI_LIMITS } from './ai-policy';
 import { AI_CITATION_TYPES, MAX_CITATIONS } from './tools/tool.types';

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 # Isolated Linux runner only. No service installation or host DNS changes.
 set -euo pipefail
 project_root="$(pwd)"

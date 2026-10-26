@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import type { Configuration } from 'openid-client';
 import type { SsoConfiguration } from './sso.config';

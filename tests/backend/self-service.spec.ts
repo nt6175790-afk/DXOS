@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ForbiddenException } from '@nestjs/common';
 import { SelfServiceService } from '../../backend/src/modules/self-service/self-service.service';
 import { AttendanceStatus, EmployeeStatus, LeaveStatus } from '@prisma/client';

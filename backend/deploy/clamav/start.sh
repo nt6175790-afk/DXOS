@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 set -eu
 if [ "$(id -u)" = 0 ]; then
   mkdir -p /var/lib/clamav

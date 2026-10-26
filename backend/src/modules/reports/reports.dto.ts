@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Transform } from 'class-transformer';
 import { AttendanceStatus, EmployeeStatus, LeaveStatus, PayrollPeriodStatus } from '@prisma/client';
 import { IsEnum, IsIn, IsInt, IsOptional, IsUUID, Matches, Max, Min } from 'class-validator';

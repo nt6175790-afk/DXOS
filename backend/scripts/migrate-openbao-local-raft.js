@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Controlled local file -> Raft copy; original encrypted source volume stays intact.
 const fs = require('node:fs');
 const path = require('node:path');

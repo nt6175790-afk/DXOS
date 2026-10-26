@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useState, useEffect } from 'react';
 import { Building2, Save, Users, Settings as SettingsIcon } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';

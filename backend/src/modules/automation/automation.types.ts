@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 export const AUTOMATION_TRIGGERS = {
   DOCUMENT_EXPIRING_30D: 'DOCUMENT_EXPIRING_30D',
   DOCUMENT_EXPIRING_7D: 'DOCUMENT_EXPIRING_7D',

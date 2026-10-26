@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConfigService } from '@nestjs/config';
 import { getAppConfiguration } from '../../backend/src/config/environment';
 import type { AppConfiguration } from '../../backend/src/config/environment';

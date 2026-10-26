@@ -31,6 +31,10 @@ Mở **http://localhost:8090**, email **admin.demo@dxos.local**, mật khẩu t�
 
 Chi tiết bản mới, quy trình kiểm chứng và giới hạn: [DX-OS v0.2.0](docs/release/v0.2.0.md). **Để dùng AI agent Ollama mới như bản demo hiện tại, lấy nhánh `main` và làm theo [hướng dẫn AI Ollama cho người chấm](#cài-ai-ollama-cho-giảng-viênngười-chấm-windows). Tag v0.2.0 cũ không chứa các cập nhật này và không được sửa lại.**
 
+## Đối chiếu yêu cầu HaUI và cách kiểm chứng
+
+[INSTALL](INSTALL.md) · [Kiến trúc ba tầng/H-P-D-I](docs/architecture/architecture.md) · [Bảng đối chiếu](docs/review/teacher-requirements.md) · [Kịch bản demo](docs/DEMO_GUIDE.md) · [Nguồn dữ liệu](docs/DATA_SOURCES.md) · [Changelog](CHANGELOG.md) · [Kết quả kiểm thử đợt mới](docs/review/teacher-validation.md). Các giới hạn và trạng thái phát hành được ghi rõ; không coi tài liệu lịch sử là chứng nhận hiện tại.
+
 ## Chức năng
 
 - Tổng quan, phòng ban, nhân sự, công việc/Kanban, lịch và tìm kiếm.

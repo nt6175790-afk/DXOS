@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const coordinates = {
   latitude: { type: 'number', minimum: -90, maximum: 90 },
   longitude: { type: 'number', minimum: -180, maximum: 180 },

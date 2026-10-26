@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Tests the existing demo identity through WAF -> APISIX -> backend. Never logs tokens/passwords.
 const assert = require('node:assert/strict');
 const { readFileSync, writeFileSync } = require('node:fs');

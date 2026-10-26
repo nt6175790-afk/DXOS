@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { api, setTokens, clearTokens, getAccessToken, getRefreshToken } from './client';
 import type { LoginRequest, AuthResponse, CurrentUser } from './types';
 import axios from 'axios';

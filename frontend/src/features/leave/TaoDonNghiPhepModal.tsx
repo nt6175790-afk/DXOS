@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import React, { useState, useEffect, useId } from 'react';
 import { X, Calendar, AlertCircle, Loader2 } from 'lucide-react';
 import { createLeaveRequest, LeaveType } from '@/api/leave';

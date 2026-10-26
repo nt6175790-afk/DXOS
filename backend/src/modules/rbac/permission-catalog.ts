@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 export const PERMISSIONS = {
   REPORT_READ: 'report:read', REPORT_EXPORT: 'report:export',
   CALENDAR_READ: 'calendar:read', CALENDAR_CREATE: 'calendar:create', CALENDAR_UPDATE: 'calendar:update',

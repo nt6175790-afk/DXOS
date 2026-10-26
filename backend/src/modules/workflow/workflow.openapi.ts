@@ -1,0 +1,25 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
+const uuid = { type: 'string', format: 'uuid' };
+const org = { name: 'organizationId', in: 'path', required: true, schema: uuid };
+const id = { name: 'id', in: 'path', required: true, schema: uuid };
+const errors = Object.fromEntries(['400', '401', '403', '404', '409'].map(code => [code, { $ref: '#/components/responses/ErrorResponse' }]));
+const jsonResponse = (schema: object) => ({ description: 'Persisted workflow metadata; no authentication credentials', content: { 'application/json': { schema } } });
+const instance = { $ref: '#/components/schemas/WorkflowInstance' };
+const body = (properties: Record<string, object>, required: string[] = []) => ({ required: true, content: { 'application/json': { schema: { type: 'object', additionalProperties: false, properties, required } } } });
+const security = [{ bearerAuth: [] }];
+const authorization = 'JWT and ACTIVE organization membership; existing workflow permission or workflow:manage required. No role-name bypass. Foreign resources return 404 only after tenant authorization; foreign membership returns 403. See contracts/api/workflow.md.';
+export const workflowSchemas = {
+  WorkflowDefinition: { type: 'object', properties: { id: uuid, organizationId: uuid, name: { type: 'string' }, description: { type: 'string', nullable: true }, triggerType: { type: 'string' }, steps: { type: 'string', description: 'JSON-encoded step configuration, not executable code' }, isActive: { type: 'boolean' }, createdBy: uuid, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' } } },
+  WorkflowInstance: { type: 'object', properties: { id: uuid, organizationId: uuid, workflowDefinitionId: uuid, title: { type: 'string' }, status: { type: 'string', enum: ['RUNNING', 'WAITING', 'COMPLETED', 'FAILED', 'CANCELLED'] }, currentStepIndex: { type: 'integer' }, ownerUserId: uuid, startedAt: { type: 'string', format: 'date-time' }, completedAt: { type: 'string', format: 'date-time', nullable: true }, definition: { $ref: '#/components/schemas/WorkflowDefinition' }, stepExecutions: { type: 'array', items: { type: 'object', properties: { id: uuid, stepIndex: { type: 'integer' }, stepName: { type: 'string' }, stepType: { type: 'string' }, status: { type: 'string' }, assignedToUserId: { ...uuid, nullable: true }, comments: { type: 'string', nullable: true }, completedAt: { type: 'string', format: 'date-time', nullable: true } } } } } },
+};
+export const workflowPaths = {
+  '/organizations/{organizationId}/workflows/definitions': { get: { summary: 'List workflow definitions (workflow:read)', description: authorization + ' Lazily ensures built-in default definitions in this tenant.', security, parameters: [org], responses: { '200': jsonResponse({ type: 'array', items: { $ref: '#/components/schemas/WorkflowDefinition' } }), ...errors } } },
+  '/organizations/{organizationId}/workflows': {
+    get: { summary: 'List recent workflow instances (workflow:read)', description: authorization + ' Bounded recent list; default/max 50, no cursor or total count.', security, parameters: [org, { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 50 } }, { name: 'status', in: 'query', schema: { type: 'string', enum: ['RUNNING', 'WAITING', 'COMPLETED', 'FAILED', 'CANCELLED'] } }], responses: { '200': jsonResponse({ type: 'array', items: instance }), ...errors } },
+    post: { summary: 'Start an active workflow definition (workflow:create)', description: authorization, security, parameters: [org], requestBody: body({ workflowDefinitionId: uuid, title: { type: 'string', minLength: 1, maxLength: 255 }, entityType: { type: 'string' }, entityId: { type: 'string' }, data: { type: 'object' } }, ['workflowDefinitionId', 'title']), responses: { '201': jsonResponse(instance), ...errors } },
+  },
+  '/organizations/{organizationId}/workflows/{id}': { get: { summary: 'Read workflow history (workflow:read)', description: authorization, security, parameters: [org, id], responses: { '200': jsonResponse(instance), ...errors } } },
+  '/organizations/{organizationId}/workflows/{id}/steps/{stepId}/confirm': { post: { summary: 'Confirm the current human step (workflow:update)', description: authorization + ' Only WAITING/current HUMAN_CONFIRMATION can advance; cancelled/completed or duplicate requests cannot revive a process.', security, parameters: [org, id, { name: 'stepId', in: 'path', required: true, schema: uuid }], requestBody: body({ comments: { type: 'string', maxLength: 1000 }, resultPayload: { type: 'object' } }), responses: { '201': jsonResponse(instance), ...errors } } },
+  '/organizations/{organizationId}/workflows/{id}/cancel': { post: { summary: 'Cancel a running/waiting workflow (workflow:cancel)', description: authorization, security, parameters: [org, id], requestBody: body({ reason: { type: 'string', maxLength: 1000, description: 'Accepted by the existing API; currently not persisted' } }), responses: { '201': jsonResponse(instance), ...errors } } },
+};

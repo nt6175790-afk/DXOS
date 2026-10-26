@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Scan immutable image IDs of this stack's actual containers, never Config.Env.
 const fs = require('node:fs');
 const path = require('node:path');
