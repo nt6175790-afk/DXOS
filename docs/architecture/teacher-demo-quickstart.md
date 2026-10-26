@@ -17,7 +17,7 @@ Demo cơ bản không cần Docker, API key AI, Keycloak, OpenBao hoặc ClamAV.
 Lệnh bên dưới dùng PowerShell trên Windows. Dùng npm.cmd để tránh lỗi chặn script npm.ps1. Với Linux/macOS, thay npm.cmd bằng npm và Copy-Item bằng cp.
 
 ```powershell
-git clone --branch v0.2.0 --depth 1 https://github.com/nt6175790-afk/DXOS.git
+git clone --branch main https://github.com/nt6175790-afk/DXOS.git
 cd DXOS
 node --version
 npm.cmd --version
@@ -84,7 +84,7 @@ npm.cmd --workspace @dx-os/backend run seed:demo-roles
 
 Migration status phải báo database đã cập nhật. Seed tạo tổ chức dxos-demo, thành viên ACTIVE và quyền theo cơ chế RBAC hiện có. seed:demo-admin đặt/cập nhật mật khẩu admin theo DEMO_ADMIN_PASSWORD; seed:demo dùng cùng mật khẩu cho thành viên demo mới, giữ mật khẩu thành viên đã tồn tại. Chỉ dùng các seed này trên database demo, không dùng production.
 
-`seed:demo-roles` có trong nhánh hardening kế tiếp v0.2.0, xem [ma trận bốn tài khoản](demo-business-permissions.md). Nếu đang chạy tag v0.2.0 cũ, bỏ qua lệnh này; tag cũ không được thay đổi. Bản hardening tạo đúng vai trò kinh doanh/kỹ thuật/kho vận/nhân sự, không cấp quyền rộng chỉ để thử AI.
+`main` đã có `seed:demo-roles`, xem [ma trận bốn tài khoản](demo-business-permissions.md). Tag v0.2.0 cũ không chứa bước này và không được thay đổi; để dùng hướng dẫn hiện tại, lấy `main`. Các vai trò kinh doanh/kỹ thuật/kho vận/nhân sự giữ đúng ma trận, không cấp quyền rộng chỉ để thử AI. Muốn bật model Ollama thật thay mock, làm tiếp [hướng dẫn AI Ollama trong README](../../README.md#cài-ai-ollama-cho-giảng-viênngười-chấm-windows), gồm đăng nhập/Connect thiết bị và cấu hình local.
 
 ## 4. Khởi động và đăng nhập
 
