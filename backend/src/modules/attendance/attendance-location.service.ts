@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';

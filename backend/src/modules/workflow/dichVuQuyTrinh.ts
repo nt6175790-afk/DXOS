@@ -1,5 +1,8 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -174,6 +177,9 @@ export class WorkflowService implements OnModuleInit {
     if (!definition) {
       throw new NotFoundException(`Workflow definition ${dto.workflowDefinitionId} not found`);
     }
+    if (!definition.isActive) {
+      throw new BadRequestException('Workflow definition is inactive');
+    }
 
     const steps: WorkflowStepConfig[] = JSON.parse(definition.steps || '[]');
     if (steps.length === 0) {
@@ -262,15 +268,23 @@ export class WorkflowService implements OnModuleInit {
       throw new NotFoundException(`Step execution ${stepId} not found`);
     }
 
-    if (
-      step.status !== WORKFLOW_STEP_STATUS.WAITING_CONFIRMATION &&
-      step.status !== WORKFLOW_STEP_STATUS.IN_PROGRESS
-    ) {
+    if (instance.status !== WORKFLOW_STATUS.WAITING ||
+      step.stepIndex !== instance.currentStepIndex ||
+      step.stepType !== WORKFLOW_STEP_TYPES.HUMAN_CONFIRMATION ||
+      step.status !== WORKFLOW_STEP_STATUS.WAITING_CONFIRMATION) {
       throw new BadRequestException(`Step ${step.stepName} is in status ${step.status} and cannot be confirmed`);
     }
 
     // Complete the confirmed step
     await this.prisma.$transaction(async (tx) => {
+      // Claim the instance before changing its step. Concurrent cancellation or
+      // confirmation must not revive a cancelled process or duplicate execution.
+      const claim = await tx.workflowInstance.updateMany({
+        where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.WAITING,
+          currentStepIndex: step.stepIndex },
+        data: { status: WORKFLOW_STATUS.RUNNING },
+      });
+      if (claim.count !== 1) throw new ConflictException('Workflow state changed; reload before confirming');
       await tx.workflowStepExecution.update({
         where: { id: step.id },
         data: {
@@ -314,15 +328,20 @@ export class WorkflowService implements OnModuleInit {
     if (!instance) {
       throw new NotFoundException(`Workflow instance ${instanceId} not found`);
     }
+    if (![WORKFLOW_STATUS.RUNNING, WORKFLOW_STATUS.WAITING].includes(instance.status as 'RUNNING' | 'WAITING')) {
+      throw new BadRequestException('Only an active workflow can be cancelled');
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const res = await tx.workflowInstance.update({
-        where: { id: instanceId },
+      const claim = await tx.workflowInstance.updateMany({
+        where: { id: instanceId, organizationId, status: instance.status,
+          currentStepIndex: instance.currentStepIndex },
         data: {
           status: WORKFLOW_STATUS.CANCELLED,
           completedAt: new Date(),
         },
       });
+      if (claim.count !== 1) throw new ConflictException('Workflow state changed; reload before cancelling');
 
       await this.audit.record(
         {
@@ -334,7 +353,7 @@ export class WorkflowService implements OnModuleInit {
         tx,
       );
 
-      return res;
+      return tx.workflowInstance.findFirstOrThrow({ where: { id: instanceId, organizationId } });
     });
 
     return updated;
@@ -357,6 +376,12 @@ export class WorkflowService implements OnModuleInit {
     }
 
     const steps = instance.stepExecutions;
+    const updateActiveState = async (data: { currentStepIndex: number; status?: string }) => {
+      const result = await this.prisma.workflowInstance.updateMany({
+        where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING }, data,
+      });
+      if (result.count !== 1) throw new ConflictException('Workflow is no longer running');
+    };
     for (let i = startFromIndex; i < steps.length; i++) {
       const step = steps[i];
 
@@ -387,10 +412,7 @@ export class WorkflowService implements OnModuleInit {
             resultPayload: JSON.stringify({ sent: true, timestamp: new Date().toISOString() }),
           },
         });
-        await this.prisma.workflowInstance.update({
-          where: { id: instance.id },
-          data: { currentStepIndex: i },
-        });
+        await updateActiveState({ currentStepIndex: i });
       } else if (step.stepType === WORKFLOW_STEP_TYPES.HUMAN_CONFIRMATION) {
         // Pauses here! Human confirmation required
         await this.prisma.workflowStepExecution.update({
@@ -400,12 +422,9 @@ export class WorkflowService implements OnModuleInit {
             executedAt: new Date(),
           },
         });
-        await this.prisma.workflowInstance.update({
-          where: { id: instance.id },
-          data: {
+        await updateActiveState({
             status: WORKFLOW_STATUS.WAITING,
             currentStepIndex: i,
-          },
         });
 
         // Notify that human confirmation is needed
@@ -440,22 +459,20 @@ export class WorkflowService implements OnModuleInit {
             resultPayload: JSON.stringify({ action: 'SUCCESS', details: 'Completed automatically.' }),
           },
         });
-        await this.prisma.workflowInstance.update({
-          where: { id: instance.id },
-          data: { currentStepIndex: i },
-        });
+        await updateActiveState({ currentStepIndex: i });
       }
     }
 
     // All steps completed!
     await this.prisma.$transaction(async (tx) => {
-      await tx.workflowInstance.update({
-        where: { id: instance.id },
+      const result = await tx.workflowInstance.updateMany({
+        where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING },
         data: {
           status: WORKFLOW_STATUS.COMPLETED,
           completedAt: new Date(),
         },
       });
+      if (result.count !== 1) throw new ConflictException('Workflow is no longer running');
 
       await this.audit.record(
         {

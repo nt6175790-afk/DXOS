@@ -1,8 +1,26 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { WORKFLOW_STATUS } from './workflow.types';
+
+export class ListWorkflowInstancesDto {
+  @IsOptional()
+  @IsIn(Object.values(WORKFLOW_STATUS))
+  status?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+}
 
 export class CreateWorkflowInstanceDto {
   @IsString()
   @IsNotEmpty()
+  @IsUUID('4')
   workflowDefinitionId!: string;
 
   @IsString()

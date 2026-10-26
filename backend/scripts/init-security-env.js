@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const { randomBytes } = require('node:crypto');
 const { writeFileSync } = require('node:fs');
 const { resolve } = require('node:path');

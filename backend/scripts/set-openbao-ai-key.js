@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Adds or rotates AI_API_KEY in the local OpenBao secrets after publish-openbao-local-secrets.js has run.
 // Reads the key from AI_API_KEY (environment, .env or backend/.env), writes it with check-and-set to secret/dxos and
 // secret/dxos-container, and removes any plaintext copy from .security.backend.env. Never prints the key.

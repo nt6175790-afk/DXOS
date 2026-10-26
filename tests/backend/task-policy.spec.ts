@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { isTaskTimestamp, taskPermissions } from '../../backend/src/modules/work/task-policy';
 import { plainToInstance } from 'class-transformer';
 import { UpdateTaskDto } from '../../backend/src/modules/work/task.dto';

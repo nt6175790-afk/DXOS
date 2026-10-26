@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // One-time, compare-and-set publication of existing local credentials to dedicated OpenBao.
 // Does not rotate credentials, change database grants, or print secret values.
 const { readFileSync, writeFileSync, existsSync } = require('node:fs');

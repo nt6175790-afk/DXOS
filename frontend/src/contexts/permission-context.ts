@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { createContext, useContext } from 'react';
 import type { Permission, ApiError } from '@/api/types';
 

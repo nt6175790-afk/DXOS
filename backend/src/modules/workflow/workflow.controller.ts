@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import {
   Body,
   Controller,
@@ -16,6 +18,7 @@ import {
   CancelWorkflowDto,
   ConfirmWorkflowStepDto,
   CreateWorkflowInstanceDto,
+  ListWorkflowInstancesDto,
 } from './workflow.dto';
 
 @Controller('organizations/:organizationId/workflows')
@@ -36,10 +39,9 @@ export class WorkflowController {
   listInstances(
     @CurrentUser() caller: AuthenticatedRequestContext,
     @Param('organizationId') orgId: string,
-    @Query('status') status?: string,
-    @Query('limit') limit?: number,
+    @Query() query: ListWorkflowInstancesDto,
   ) {
-    return this.workflowService.listInstances(caller.user.id, orgId, { status, limit });
+    return this.workflowService.listInstances(caller.user.id, orgId, query);
   }
 
   @Get(':id')

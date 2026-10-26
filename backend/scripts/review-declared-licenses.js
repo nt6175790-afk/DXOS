@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Explicit evidence review for fixed releases whose publisher omitted LICENSE.
 // Preserve original declarations/attributions; never fabricate upstream copyright.
 const fs = require('node:fs');

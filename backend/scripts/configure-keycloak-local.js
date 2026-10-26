@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Update only the existing local public client's allowlisted logout return URLs.
 const fs = require('node:fs');
 const path = require('node:path');

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Local CA is trusted only by the DX-OS processes, never installed in the OS trust store.
 const { spawnSync } = require('node:child_process');
 const { existsSync, mkdirSync, writeFileSync } = require('node:fs');

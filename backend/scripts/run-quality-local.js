@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // OSS quality gate: ESLint/TypeScript + test evidence + npm/notice checks.
 // This replaces Sonar; it does not claim Sonar's rules/dashboard are identical.
 const fs = require('node:fs');

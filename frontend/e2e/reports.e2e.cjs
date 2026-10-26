@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 /* Real browser + real Nest API + disposable MySQL. No HTTP mocks or production data writes.
    Run after backend build. Set PLAYWRIGHT_MODULE to an installed playwright package when
    it is supplied by the local tooling runtime; otherwise standard require('playwright'). */

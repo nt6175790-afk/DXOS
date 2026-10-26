@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, Laptop, Sparkles, Check } from 'lucide-react';
 import { useTheme, type ThemeMode, type SeasonMode } from '@/contexts/ThemeContext';

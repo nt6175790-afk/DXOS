@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)) => ({ type: 'object', additionalProperties: false, required, properties });
 const count = { type: 'integer', minimum: 0 };

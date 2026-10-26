@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Numeric grounding check (spec 9.6): every number in the answer should come from data the request actually saw —
  * tool results, the user's own messages or the current date/time in the system prompt. v1 only warns, never blocks.

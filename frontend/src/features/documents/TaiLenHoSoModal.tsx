@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { getErrorMessage } from '@/api/error-message';
 import React, { useState, useRef, useEffect } from 'react';
 import {

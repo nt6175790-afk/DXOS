@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const assert = require('node:assert/strict');
 const { Readable } = require('node:stream');
 const { ConfigService } = require('@nestjs/config');

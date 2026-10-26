@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { taskCollaborationPaths, taskCollaborationSchemas } from './task-collaboration.openapi';
 const error = { $ref: '#/components/responses/ErrorResponse' };
 const json = (schema: object) => ({ 'application/json': { schema } });

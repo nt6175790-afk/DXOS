@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Transform } from 'class-transformer';
 import { TaskPriority, TaskStatus } from '@prisma/client';
 import { IsEnum, IsInt, IsString, IsUUID, Length, Matches, Max, Min, ValidateBy, ValidateIf } from 'class-validator';

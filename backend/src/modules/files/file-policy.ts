@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { BadRequestException, UnsupportedMediaTypeException } from '@nestjs/common';
 
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;

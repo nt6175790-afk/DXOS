@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import type { Prisma } from '@prisma/client';
 import type { AuthorizationService } from '../rbac/authorization.service';
 import { PERMISSIONS } from '../rbac/permission-catalog';

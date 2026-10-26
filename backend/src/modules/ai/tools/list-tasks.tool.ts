@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Injectable } from '@nestjs/common';
 import { TaskPriority } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConfigService } from '@nestjs/config';
 import { SsoService } from '../../backend/src/modules/auth/sso.service';
 import { OidcProvider } from '../../backend/src/modules/auth/oidc.provider';

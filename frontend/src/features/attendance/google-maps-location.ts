@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 /** Read an explicitly selected Maps pin, never the viewport centre after @. No network requests. */
 export function googleMapsSearchUrl(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address.trim())}`;

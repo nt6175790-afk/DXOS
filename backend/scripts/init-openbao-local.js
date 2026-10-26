@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Initializes only the dedicated local dxos-security OpenBao instance.
 // Bootstrap material stays in ignored .secrets; never printed or added to Git.
 const { existsSync, readFileSync, mkdirSync, writeFileSync } = require('node:fs');

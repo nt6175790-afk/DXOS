@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Injectable } from '@nestjs/common';
 import { IsIn, IsOptional, IsUUID } from 'class-validator';
 import { AttendanceService, type AssistantAttendanceIssue } from '../../attendance/attendance.service';

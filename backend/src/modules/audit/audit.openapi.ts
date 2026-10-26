@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { AUDIT_EVENT_NAMES } from './audit-catalog';
 import { PERMISSIONS } from '../rbac/permission-catalog';
 

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Injectable } from '@nestjs/common';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsString, IsUUID, Length } from 'class-validator';

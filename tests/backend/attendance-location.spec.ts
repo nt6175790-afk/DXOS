@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { assertAttendancePosition, distanceMeters } from '../../backend/src/modules/attendance/attendance-location.service';
 
 describe('Attendance location 100m policy', () => {

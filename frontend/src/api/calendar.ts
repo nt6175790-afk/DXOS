@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { api } from './client';
 import type { PaginatedResponse, TaskPriority, TaskStatus } from './types';
 export interface CalendarTask { id: string; title: string; dueAt: string; priority: TaskPriority; status: TaskStatus; progressPercent: number }

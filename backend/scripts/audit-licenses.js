@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Offline inventory of locked npm packages; unknown/custom/copyleft need explicit review.
 const { readFileSync, existsSync, mkdirSync, writeFileSync } = require('node:fs');
 const { resolve, join } = require('node:path');

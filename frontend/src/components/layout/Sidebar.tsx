@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { LayoutDashboard, Building2, Users, CheckSquare, CalendarDays, CalendarOff, Clock,

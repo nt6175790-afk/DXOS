@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MapPin, LocateFixed, ShieldCheck, ExternalLink } from 'lucide-react';
 import { getAttendanceLocation, setAttendanceLocation, type AttendanceLocationPolicy, type AttendancePosition } from '@/api/attendance';

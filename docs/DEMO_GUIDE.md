@@ -1,134 +1,41 @@
-# DX-OS Enterprise Demo Guide (Phase 2)
+# Kịch bản demo DX-OS cho hội đồng
 
-This document provides a guided walkthrough for demonstrating the complete DX-OS Enterprise HR & Business Management platform. It covers key user personas, standard test credentials, navigation flows, and feature highlights across all 9 core operational domains.
+Đây là kịch bản thực hành, không phải báo cáo học thuật đã nộp hay kết quả chạy tự động. Chuẩn bị phần chính 10 phút và phần dự phòng hỏi đáp; thông báo nhóm ngày 25/10 dành 15–20 phút tổng cộng. Dùng dữ liệu hư cấu, không ghi hình password.
 
----
+## Chuẩn bị và tài khoản đúng seed
 
-## 1. System Overview & Architecture
+Chạy theo [INSTALL](../INSTALL.md). Dữ liệu [provenance](DATA_SOURCES.md). Tìm organization có slug dxos-demo từ API hoặc bộ chọn, không hardcode UUID của máy tác giả.
 
-DX-OS is an enterprise-grade Human Resource and Operations platform designed for strict multi-tenant isolation, organizational compliance, and scalable business workflows.
+| Người demo | Email | Quyền / giới hạn |
+| --- | --- | --- |
+| Admin demo | admin.demo@dxos.local | Quản trị trong tổ chức demo theo grants seed, không phải bypass toàn hệ thống |
+| An — kinh doanh | an.demo@dxos.local | 13 quyền, xem/tạo task, không sửa/assign toàn tổ chức, không AI |
+| Minh Anh — kỹ thuật | minh-anh.demo@dxos.local | 13 quyền, xem/tạo task và ai:use, không sửa/assign toàn tổ chức |
+| Nam — kho vận | hoang-nam.demo@dxos.local | 12 quyền, không AI và không quyền HR rộng |
+| Hà — nhân sự | thu-ha.demo@dxos.local | 32 quyền HR đã chốt, không tự cấp quyền duyệt chung/lương/AI |
 
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons, date-fns.
-- **Backend**: NestJS, TypeScript, Prisma ORM 6.19.3, MySQL 8.0+.
-- **Security**: Argon2id password hashing, rotating refresh tokens, organization-scoped RBAC with 81 granular permissions, path traversal guard, SQL injection prevention, formula injection sanitization.
-- **Timezone**: Canonical Asia/Ho_Chi_Minh (UTC+07:00).
+Password seed lấy từ DEMO_ADMIN_PASSWORD trên máy cài; tài khoản đã đổi password dùng password riêng đã đặt. Không có hr.manager@dxos.local hay emp.demo@dxos.local trong bộ seed hiện tại. Xem [ma trận](architecture/demo-business-permissions.md). Không cấp quyền bổ sung để một vai trò xem được mọi màn hình.
 
----
+## Tình huống: vận hành nhân sự/công việc của một đơn vị đào tạo
 
-## 2. Environment Startup
+Một khoa/đơn vị có nhân sự, hồ sơ cần rà soát, lịch làm việc và các việc có hạn. Dùng chính các module hiện có; tên phòng ban seed là ví dụ doanh nghiệp, không khẳng định dữ liệu lấy từ trường. Luồng người dùng → core → quy trình → dữ liệu → phân tích → kết quả:
 
-Ensure both backend and frontend servers are running:
+1. **H, 1 phút:** đăng nhập, chọn tổ chức, xem nhân sự/phòng ban/tài liệu. Chỉ ra tổ chức hiện tại và nguồn dữ liệu giả lập. Giải thích SSO tùy chọn liên kết danh tính, RBAC vẫn ở backend.
+2. **P, 3 phút:** admin mở Quy trình, chọn quy trình bổ sung hồ sơ đang active, tạo một lượt rà soát cho tình huống đơn vị đào tạo. Thấy thông báo và bước HUMAN_CONFIRMATION chờ người thực hiện; đọc trạng thái, người tạo và thời gian. Xác nhận sau khi kiểm tra mẫu, xem COMPLETED và người xác nhận. ACTION/TASK engine chỉ ghi nhận bước: không tuyên bố hợp đồng/hồ sơ đã tự sửa. Nếu cần quản lý việc thật, tạo và cập nhật trong Công việc bằng tài khoản có quyền hiện tại.
+3. **D, 2 phút:** mở Dashboard/Công việc, lọc trạng thái/hạn, xem số liệu và nguồn bản ghi; số liệu không cố định vì seed có thể được refresh. Mở audit để thấy sự kiện tạo/xác nhận/hoàn tất. Trình bày REST/OpenAPI để chứng minh React không giữ dữ liệu hay quyền chuẩn.
+4. **I, 2 phút:** admin hoặc Minh Anh hỏi “Những công việc nào đang quá hạn?”; mở nguồn câu trả lời và đối chiếu danh sách. Hỏi tiếp tóm tắt dữ liệu vừa tìm. Chỉ gọi live khi đã test provider thật; Docker demo 8090 là mock. Có thể dùng native Ollama theo README để biểu diễn model thật. Không mô tả kiểm tra con số đơn giản là bảo đảm mọi suy luận đều đúng.
+5. **An toàn và tái sử dụng, 2 phút:** chuyển An để thấy các quyền bị giới hạn; gọi API thiếu token phải 401, trái quyền/tenant phải 403/404. Chỉ ra core được gọi bởi HTTP client khi không cần React. Mở license, release/tag, INSTALL và CI của đúng revision.
 
-```bash
-# 1. Backend server (Port 3000)
-npm --workspace @dx-os/backend run start
+## Khi không có mạng hoặc dịch vụ ngoài lỗi
 
-# 2. Frontend client (Port 5173)
-npm --prefix frontend run dev
-```
+Dựng/cài dependency cần Internet hoặc cache đã chuẩn bị trước. Khi đã dựng, demo 8090 dùng dữ liệu local + mock và không gọi cloud. Không giả câu trả lời mock thành Ollama thành công. Dùng fixture đã có cho đánh giá và giải thích khác biệt. Nếu provider thật lỗi/hết quota, giữ hiển thị lỗi, chuyển sang bản demo mock được ghi rõ.
 
-Navigate your browser to: `http://localhost:5173`
+Không tắt xác thực/RBAC, không giả GPS hoặc bỏ ca làm để làm đẹp demo. Nếu workflow không active hoặc đã hủy, tạo lượt mới; không sửa trực tiếp database để ép hoàn tất.
 
----
+## Tự kiểm trước buổi trình bày
 
-## 3. Demo Personas & Credentials
-
-| Role / Persona | Email | Default Password | Primary Permissions & Responsibilities |
-| :--- | :--- | :--- | :--- |
-| **System Admin** | `admin.demo@dxos.local` | `<lấy từ DEMO_ADMIN_PASSWORD trong local env, không công khai>` | Full platform control: settings, employees, payroll runs, compliance, audits. |
-| **HR Manager** | `hr.manager@dxos.local` | *(Organization HR)* | Approvals, review cycles, leave requests, employee compliance, workforce reports. |
-| **Standard Employee** | `emp.demo@dxos.local` | *(Organization Member)* | Self-service: check-in/out, leave requests, self-evaluations, personal documents. |
-
-> **Target Demo Organization**:
-> - **Name**: `DX-OS Demo Organization`
-> - **Organization ID**: `ba4540d1-f418-485b-a69e-8a5633cb3ba3`
-> - **Slug**: `dxos-demo`
-
----
-
-## 4. End-to-End Demo Script (10 Key Stops)
-
-### Stop 1: Dashboard Overview (`/dashboard`)
-- **Action**: Log in with Admin credentials.
-- **Highlight**:
-  - Top header displays organization switcher with active tenant (`DX-OS Demo Organization`).
-  - Metric summary cards: Active Departments (5), Headcount (5), On-time Rate, Pending Approvals.
-  - Quick action shortcuts to register employees, create events, log attendance, review tasks, and launch AI Assistant.
-  - Responsive collapse on smaller viewports.
-
-### Stop 2: Employee Directory (`/people`)
-- **Action**: Click **Nhân sự** on the sidebar navigation.
-- **Highlight**:
-  - Employee list with live Vietnamese text search, department filtering, and sort by name/code.
-  - Badges displaying employment status (`Hoạt động`, `Ngừng hoạt động`).
-  - Action buttons to open detail drawer or edit modal.
-  - Role-based button **Thêm nhân sự** guarded by `employee:create`.
-
-### Stop 3: Time & Attendance Management (`/attendance`)
-- **Action**: Click **Chấm công** on the sidebar navigation.
-- **Highlight**:
-  - Real-time Vietnam Time clock (UTC+07:00).
-  - One-click Check-in and Check-out controls with automatic shift detection (`Ca hành chính 09:00 - 18:00`).
-  - Attendance history table showing check-in/out timestamps, tardiness minutes, and status badges (`Đúng giờ`, `Đi muộn`, `Vắng mặt`).
-  - Monthly aggregated metrics (Standard work days, On-time count, Late count).
-
-### Stop 4: Leave Management (`/leave`)
-- **Action**: Click **Nghỉ phép** on the sidebar navigation.
-- **Highlight**:
-  - Leave entitlement quotas (Annual leave, Sick leave, Unpaid leave).
-  - Leave request submission form with date range picker and reason input.
-  - Tabbed overview of pending, approved, and rejected leave requests with manager comments.
-
-### Stop 5: Approval Workflows (`/approvals`)
-- **Action**: Click **Phê duyệt** on the sidebar navigation.
-- **Highlight**:
-  - Centralized enterprise approval inbox for multi-step workflows (Leave, Overtime, Expenses).
-  - Instant One-Click Approve / Reject actions with audit trail tracking who approved and when.
-  - Filter by pending, processed, and type of request.
-
-### Stop 6: Payroll & Compensation (`/payroll`)
-- **Action**: Click **Tiền lương** on the sidebar navigation.
-- **Highlight**:
-  - Monthly payroll cycles (`Bảng lương tháng`).
-  - Salary structure breakdown: Base salary, allowances, overtime pay, social insurance deductions, net pay.
-  - Strict lifecycle states: `DRAFT` -> `PROCESSING` -> `CALCULATED` -> `PENDING_APPROVAL` -> `APPROVED` -> `FINALIZED`.
-  - Export capabilities for financial audits.
-
-### Stop 7: Performance Management (`/performance`)
-- **Action**: Click **Hiệu suất** on the sidebar navigation.
-- **Highlight**:
-  - 4 sub-tabs: *Tổng quan & Chỉ số*, *Chu kỳ đánh giá*, *Phiếu đánh giá*, *Mục tiêu & KPI*.
-  - Visual rating distribution (1 to 5 stars) with percentage breakdown.
-  - Goal completion and KPI achievement meters.
-  - Review workflows supporting Self-Review, Peer Review, and Manager Review.
-
-### Stop 8: HR Reports & Analytics (`/reports`)
-- **Action**: Click **Báo cáo & Phân tích** on the sidebar navigation.
-- **Highlight**:
-  - Vietnam-timezone date range filter (e.g., `2026-07-01` to `2026-09-30`) and department selector.
-  - Aggregated metrics: Headcount, Attendance rate, Leave volume, Gross compensation.
-  - Interactive SVG visual breakdown and one-click CSV export with formula injection sanitization.
-
-### Stop 9: Documents & HR Compliance (`/documents`)
-- **Action**: Click **Hồ sơ & Tuân thủ** on the sidebar navigation.
-- **Highlight**:
-  - KPI overview: Total documents stored, Overall compliance percentage, Expiring soon (30 days), Mandatory missing count.
-  - Tab 1 (*Tất cả hồ sơ*): Document table with category tags, sensitivity levels (`PUBLIC`, `INTERNAL`, `CONFIDENTIAL`, `RESTRICTED`), version history, and secure download links.
-  - Tab 2 (*Hết hạn & Sắp hết hạn*): Proactive expiration tracker.
-  - Tab 3 (*Tuân thủ & Hồ sơ còn thiếu*): Department compliance progress bars and one-click upload shortcuts for missing employee documents.
-  - Tab 4 (*Quy định hồ sơ*): Organization-level mandatory document policy configuration.
-
-### Stop 10: Mobile Responsive Verification
-- **Action**: Resize browser to 375x812 (iPhone view) or open mobile devtools.
-- **Highlight**:
-  - Adaptive hamburger navigation drawer.
-  - Sticky topbar with organization switcher and profile badge.
-  - Card-based layouts replacing horizontal tables without clipping or horizontal overflow.
-
----
-
-## 5. Security Demonstration Points
-
-1. **Multi-tenant Isolation**: Attempting to query resources across organizations returns HTTP 403/404 with zero data leakage.
-2. **Granular RBAC**: Non-admin employees attempting to access administrative endpoints or confidential files receive HTTP 403 Forbidden.
-3. **Audit Trails**: All modifications to employee profiles, salary sheets, document uploads, and approvals are logged in the tamper-resistant audit log.
+- Máy khác clone/export đúng revision, source build, migration và seed thành công.
+- Test demo, targeted/full backend, frontend/build/lint và CI đạt; ghi revision và thời điểm.
+- Password có trên máy cài, không xuất hiện trong slide/video/log.
+- Provider mode đúng nhãn; source links và số liệu khớp bản ghi.
+- Báo cáo in và slide tối đa 12 trang do đội rà nội dung; không dùng tài liệu lịch sử có nhãn 100% QA để mô tả revision mới.

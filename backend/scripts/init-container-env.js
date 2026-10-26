@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Copies required settings into ignored local container configuration; never prints values.
 const { existsSync, writeFileSync, appendFileSync } = require('node:fs');
 const { resolve, join } = require('node:path');

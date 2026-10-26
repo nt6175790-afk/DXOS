@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Injectable } from '@nestjs/common';
 import type {
   AiChatInput, AiChatMessage, AiChatResult, AiProviderContext, AiProviderInput, AiProviderResult, AiToolCall,

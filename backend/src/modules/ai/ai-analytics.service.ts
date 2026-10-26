@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Injectable, Logger } from '@nestjs/common';
 import { DocumentStatus, LeaveStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';

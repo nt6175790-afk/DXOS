@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { describe, expect, it } from 'vitest';
 import { googleMapsPinUrl, googleMapsSearchUrl, parseGoogleMapsPin } from '@/features/attendance/google-maps-location';
 

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { IsEmail } from 'class-validator';

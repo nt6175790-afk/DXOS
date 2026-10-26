@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 declare module 'jsonwebtoken' {
   export interface JwtPayload {
     [key: string]: unknown;

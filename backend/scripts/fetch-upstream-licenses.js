@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Fixed upstream sources only; downloads are legal texts, not project/runtime secrets.
 const fs = require('node:fs');
 const path = require('node:path');

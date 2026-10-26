@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import type { ReportFilters } from '@/api/reports';
 export const count = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
 export const percent = (value: number | null | undefined) => value == null ? '—' : `${count(value)}%`;

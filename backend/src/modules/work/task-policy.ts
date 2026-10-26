@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { PERMISSIONS, type PermissionKey } from '../rbac/permission-catalog';
 
 export const TASK_COLLABORATION_KIND = 'dx-os:task-collaboration-kind';

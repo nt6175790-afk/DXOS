@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { AiController } from '../../backend/src/modules/ai/ai.controller';
 
 describe('AI Insights Endpoint (DXOS-PHASE3-TASK2)', () => {

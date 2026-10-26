@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 export type ReportKind = 'workforce' | 'attendance' | 'leave' | 'payroll' | 'departments';
 export const REPORT_KINDS: readonly ReportKind[] = ['workforce', 'attendance', 'leave', 'payroll', 'departments'];
 export type Counters = Record<string, number | null>;

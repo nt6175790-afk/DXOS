@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { DatabaseModule } from '../../backend/src/database/database.module';

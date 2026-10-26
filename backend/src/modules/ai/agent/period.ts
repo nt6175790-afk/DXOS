@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { IsIn, IsOptional, Matches } from 'class-validator';
 import { ToolArgumentError } from '../tools/tool.types';
 import { DAY_MS, VN_OFFSET_MS } from './vn-time';

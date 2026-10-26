@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Live local Keycloak + actual DX-OS HTTP/session flow on an isolated MySQL database.
 const assert = require('node:assert/strict');
 const { randomBytes, randomUUID } = require('node:crypto');

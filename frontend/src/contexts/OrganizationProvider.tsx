@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { OrganizationContext, OrganizationContextValue, useOrganization } from './organization-context';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Organization, ApiError } from '@/api/types';

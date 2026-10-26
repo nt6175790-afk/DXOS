@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const count = { type: 'integer', minimum: 0 };
 const uuid = { type: 'string', format: 'uuid' };
 const time = { type: 'string', format: 'date-time' };

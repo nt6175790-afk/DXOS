@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 DX-OS contributors
+# SPDX-License-Identifier: Apache-2.0
 FROM quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b AS distribution
 
 FROM amazoncorretto:21.0.13-al2023-headless@sha256:212faf5f8f93d8f4854a3d89528834d11ad2d685de80721d4d24ac2fdd3e379e

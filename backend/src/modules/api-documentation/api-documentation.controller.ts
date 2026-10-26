@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Controller, Get, NotFoundException } from '@nestjs/common';
 import { reportPaths, reportSchemas } from '../reports/reports.openapi';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +19,7 @@ import { searchPaths, searchSchemas } from '../search/search.openapi';
 import { calendarPaths, calendarSchemas } from '../calendar/calendar.openapi';
 import { ssoPaths } from '../auth/sso.openapi';
 import { attendancePaths, attendanceSchemas } from '../attendance/attendance.openapi';
+import { workflowPaths, workflowSchemas } from '../workflow/workflow.openapi';
 
 @Controller('docs')
 export class ApiDocumentationController {
@@ -39,6 +42,7 @@ export class ApiDocumentationController {
       },
       servers: [{ url: '/' + config.apiPrefix, description: 'DX-OS API v1' }],
       paths: {
+        ...workflowPaths,
         ...attendancePaths,
         ...ssoPaths,
         ...reportPaths,
@@ -170,6 +174,7 @@ export class ApiDocumentationController {
           },
         },
         schemas: {
+          ...workflowSchemas,
           ...reportSchemas,
           ...organizationSchemas,
           ...auditSchemas,

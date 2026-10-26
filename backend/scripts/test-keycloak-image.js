@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Real S256/OIDC login against a disposable Keycloak image. Never uses operator config, realms, users or secrets.
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');

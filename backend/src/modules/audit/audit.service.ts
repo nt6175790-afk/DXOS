@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Injectable } from '@nestjs/common';
 import { AuditSource, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';

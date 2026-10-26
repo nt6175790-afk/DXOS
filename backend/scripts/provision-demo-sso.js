@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Link only the existing, explicitly named demo account. Never creates DX-OS privileges.
 const { readFileSync, writeFileSync, existsSync, mkdirSync } = require('node:fs');
 const { resolve } = require('node:path');

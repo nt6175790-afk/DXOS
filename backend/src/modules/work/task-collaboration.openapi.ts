@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const uuid = { type: 'string', format: 'uuid' };
 const timestamp = { type: 'string', format: 'date-time' };
 const json = (schema: object) => ({ 'application/json': { schema } });

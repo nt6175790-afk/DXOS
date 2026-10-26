@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Clock3, CalendarDays } from 'lucide-react';
 import type { Shift } from '@/api/shifts';
 

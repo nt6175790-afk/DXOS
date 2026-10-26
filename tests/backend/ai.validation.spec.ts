@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { getAppConfiguration } from '../../backend/src/config/environment';
 import { GenerateAiDto } from '../../backend/src/modules/ai/ai.dto';
 import { validatedAiInput, validatedAiResult } from '../../backend/src/modules/ai/ai-validation';

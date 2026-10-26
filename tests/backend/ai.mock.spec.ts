@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConfigService } from '@nestjs/config';
 import { IsIn, IsOptional } from 'class-validator';
 import { AiAgentService } from '../../backend/src/modules/ai/agent/ai-agent.service';

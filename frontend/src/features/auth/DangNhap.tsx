@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useState } from 'react';
 import { getSsoConfig, startSso } from '@/api/sso';
 import { useNavigate, useLocation } from 'react-router-dom';

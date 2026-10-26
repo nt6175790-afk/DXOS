@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { AiAnalyticsService } from '../../backend/src/modules/ai/ai-analytics.service';
 import { PERMISSIONS } from '../../backend/src/modules/rbac/permission-catalog';
 

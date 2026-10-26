@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { AuthContext, AuthContextValue, useAuth } from './auth-context';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';

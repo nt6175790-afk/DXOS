@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useState, useRef, useEffect } from 'react';
 import { User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';

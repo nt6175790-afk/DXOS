@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Controller, Get, Header, Param, Query, Res, UseGuards } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';

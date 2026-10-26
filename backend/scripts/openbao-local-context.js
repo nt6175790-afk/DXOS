@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const { existsSync } = require('node:fs');
 const { resolve } = require('node:path');
 const { spawnSync } = require('node:child_process');

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { randomBytes, randomUUID } from 'node:crypto';
 import { demoConfiguration } from '../../backend/scripts/demo/seed-demo-dataset';
 import { demoId, demoPdf } from '../../backend/scripts/demo/demo-fixtures';

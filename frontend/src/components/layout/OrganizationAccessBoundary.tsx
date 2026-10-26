@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePermission } from '@/hooks/usePermission';

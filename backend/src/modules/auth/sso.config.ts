@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConfigService } from '@nestjs/config';
 
 export interface SsoConfiguration { issuer: string; clientId: string; clientSecret?: string; redirectUri: string; insecure: boolean; backchannelOrigin?: string }

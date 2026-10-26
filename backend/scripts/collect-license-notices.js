@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Preserve upstream legal texts, never infer that an SPDX label alone supplies notices.
 const fs = require('node:fs');
 const path = require('node:path');

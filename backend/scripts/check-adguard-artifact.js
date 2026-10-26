@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Inspect a pinned release without executing AdGuard or touching host DNS.
 const fs = require('node:fs');
 const path = require('node:path');

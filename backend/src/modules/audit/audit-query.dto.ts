@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { AUDIT_EVENT_NAMES, type AuditEventName } from './audit-catalog';

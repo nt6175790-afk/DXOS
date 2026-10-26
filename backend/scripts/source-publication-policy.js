@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Root-only workspace directories must never exclude business modules with the same name.
 function normalize(name) { return name.replace(/\\/g, '/'); }
 function isPrivateOrGeneratedPath(name) {

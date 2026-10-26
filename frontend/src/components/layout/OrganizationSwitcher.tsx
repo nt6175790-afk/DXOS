@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useState, useRef, useEffect } from 'react';
 import { Building, ChevronDown, Check } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';

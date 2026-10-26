@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Local demo only. Never print credentials or copy the operator's existing env.
 const fs = require('node:fs');
 const path = require('node:path');

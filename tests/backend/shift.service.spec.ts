@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ShiftService } from '../../backend/src/modules/shift/shift.service';
 

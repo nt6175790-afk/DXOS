@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Read-only publication check. Never print matching contents or credential values.
 const fs = require('node:fs');
 const path = require('node:path');

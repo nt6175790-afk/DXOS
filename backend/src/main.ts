@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { existsSync } from 'node:fs';

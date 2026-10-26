@@ -14,7 +14,7 @@ Khi phân phối lại, cần giữ các thông báo bản quyền/giấy phép 
 
 ## Bản phát hành và demo cho người chấm
 
-[GitHub Releases](https://github.com/nt6175790-afk/DXOS/releases) lưu phiên bản gắn tag, source zip, commit manifest và SHA-256. Dùng tag **v0.2.0** để lấy đúng mã nguồn release; main có thể thay đổi sau này. Xem [quy trình PR/release](docs/architecture/release-process.md).
+[GitHub Releases](https://github.com/nt6175790-afk/DXOS/releases) lưu phiên bản gắn tag, source zip, commit manifest và SHA-256. Chọn tag được công bố trên trang Releases để lấy đúng phiên bản; main có thể thay đổi sau này. Bản chuẩn bị v0.3.0 được mô tả ở [release notes](docs/release/v0.3.0.md); chỉ gọi là đã phát hành khi có tag và GitHub Release tương ứng. Xem [quy trình PR/release](docs/architecture/release-process.md).
 
 **Cập nhật bảo mật 21/10/2026:** v0.1.0 chứa follow-redirects 1.16.0 trong frontend lockfile, vừa được scanner báo hai HIGH. Bản vá 1.16.1 được xử lý trong [PR #15](https://github.com/nt6175790-afk/DXOS/pull/15); khi dựng bản mới, chọn revision đã vá và đã qua CI. Tag/asset v0.1.0 giữ nguyên để truy xuất; không coi bản cũ là đã có bản vá. Xem [chi tiết và phạm vi ảnh hưởng](docs/security/follow-redirects-2026-10-21.md).
 
@@ -30,6 +30,10 @@ npm.cmd run demo:test
 Mở **http://localhost:8090**, email **admin.demo@dxos.local**, mật khẩu tự sinh trong **.secrets/demo/compose.env** trên chính máy đó. Bộ này có MySQL riêng và dữ liệu giả lập, không dùng database/credential của máy tác giả. Xem [hướng dẫn Docker đầy đủ](docs/architecture/docker-demo-quickstart.md) trước khi chạy. Đây là demo loopback/offline, chưa có website public và chưa phải production.
 
 Chi tiết bản mới, quy trình kiểm chứng và giới hạn: [DX-OS v0.2.0](docs/release/v0.2.0.md). **Để dùng AI agent Ollama mới như bản demo hiện tại, lấy nhánh `main` và làm theo [hướng dẫn AI Ollama cho người chấm](#cài-ai-ollama-cho-giảng-viênngười-chấm-windows). Tag v0.2.0 cũ không chứa các cập nhật này và không được sửa lại.**
+
+## Đối chiếu yêu cầu HaUI và cách kiểm chứng
+
+[INSTALL](INSTALL.md) · [Kiến trúc ba tầng/H-P-D-I](docs/architecture/architecture.md) · [Bảng đối chiếu](docs/review/teacher-requirements.md) · [Kịch bản demo](docs/DEMO_GUIDE.md) · [Nguồn dữ liệu](docs/DATA_SOURCES.md) · [Changelog](CHANGELOG.md) · [Kết quả kiểm thử đợt mới](docs/review/teacher-validation.md). Các giới hạn và trạng thái phát hành được ghi rõ; không coi tài liệu lịch sử là chứng nhận hiện tại.
 
 ## Chức năng
 

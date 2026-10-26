@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 export const AUDIT_EVENTS = {
   REPORT_EXPORTED: 'report.exported',
   CALENDAR_EVENT_CREATED: 'calendar.event.created', CALENDAR_EVENT_UPDATED: 'calendar.event.updated',

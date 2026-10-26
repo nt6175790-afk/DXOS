@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import React, { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { Users, Shield, Plus, X, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';

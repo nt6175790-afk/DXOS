@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Real OIDC HTTP/JWKS/signature checks against a disposable protocol fixture, not a live IdP.
 const assert = require('node:assert/strict');
 const { createServer } = require('node:http');

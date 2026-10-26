@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 const labels: Record<string, string> = {
   'calendar.event.created': 'Tạo sự kiện', 'calendar.event.updated': 'Cập nhật sự kiện',
   'task.created': 'Tạo công việc', 'task.updated': 'Cập nhật công việc', 'task.assigned': 'Phân công công việc',

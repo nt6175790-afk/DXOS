@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckSquare, History, Pencil, Trash2, UserCheck } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';

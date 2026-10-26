@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ToastContext, ToastType, Toast, ToastContextValue, useToast } from './toast-context';
 import React, { useState, useCallback, useRef } from 'react';
 import { X } from 'lucide-react';

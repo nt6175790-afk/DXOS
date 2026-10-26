@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 // Explicit operator provisioning; never grants membership or permissions.
 const { PrismaClient } = require('@prisma/client');
 const { resolve } = require('node:path');

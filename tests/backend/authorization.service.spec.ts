@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { MembershipStatus, OrganizationStatus, UserAccountStatus } from '@prisma/client';
 import { PrismaService } from '../../backend/src/database/prisma.service';
 import { AuthorizationService } from '../../backend/src/modules/rbac/authorization.service';

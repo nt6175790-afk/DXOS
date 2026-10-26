@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 DX-OS contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ConfigService } from '@nestjs/config';
 import { randomUUID, createHash } from 'node:crypto';
 import { mkdtemp, readdir, rm, link, symlink } from 'node:fs/promises';
