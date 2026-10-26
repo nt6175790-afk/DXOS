@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type TaskPriority } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthorizationService } from '../rbac/authorization.service';
 import { PERMISSIONS, type PermissionKey } from '../rbac/permission-catalog';
@@ -15,6 +15,17 @@ import { taskPermissions } from './task-policy';
 const projection = { id: true, organizationId: true, creatorEmployeeId: true, assigneeEmployeeId: true, departmentId: true,
   title: true, description: true, status: true, progressPercent: true, priority: true, dueAt: true, createdAt: true, updatedAt: true } satisfies Prisma.TaskSelect;
 export type TaskResponse = Prisma.TaskGetPayload<{ select: typeof projection }>;
+export interface AssistantTaskQuery {
+  view: 'overdue' | 'mine' | 'due_soon' | 'open';
+  now: Date;
+  withinDays: number;
+  limit: number;
+  departmentId?: string;
+  assigneeEmployeeId?: string;
+  priority?: TaskPriority;
+  /** Part of the title; the column collation makes it case- and accent-insensitive. */
+  titleContains?: string;
+}
 
 @Injectable()
 export class TasksService {
@@ -47,6 +58,53 @@ export class TasksService {
         ...(query.departmentId ? { departmentId: query.departmentId } : {}) }, select: projection, orderBy: { id: 'asc' }, take: query.limit + 1 });
       const items = rows.slice(0, query.limit);
       return { items, nextCursor: rows.length > query.limit ? items[items.length - 1].id : null };
+    });
+  }
+  /**
+   * Read model for the AI assistant (task:read). Only open tasks (TODO/IN_PROGRESS):
+   * overdue (dueAt < now), due soon (now ≤ dueAt ≤ now + withinDays), assigned to the caller, or all open.
+   */
+  listForAssistant(actorId: string, organizationId: string, query: AssistantTaskQuery) {
+    return this.transaction(actorId, organizationId, [PERMISSIONS.TASK_READ], async (tx) => {
+      let assigneeEmployeeId = query.assigneeEmployeeId;
+      if (query.view === 'mine') {
+        const me = await tx.employee.findFirst({ where: { organizationId, userId: actorId }, select: { id: true } });
+        if (!me) return { notAnEmployee: true, total: 0, overdueTotal: 0, items: [] };
+        assigneeEmployeeId = me.id;
+      }
+      const dueAt = query.view === 'overdue' ? { lt: query.now }
+        : query.view === 'due_soon' ? { gte: query.now, lte: new Date(query.now.getTime() + query.withinDays * 86_400_000) }
+          : undefined;
+      const where: Prisma.TaskWhereInput = { organizationId, status: { in: ['TODO', 'IN_PROGRESS'] },
+        ...(dueAt ? { dueAt } : {}), ...(assigneeEmployeeId ? { assigneeEmployeeId } : {}),
+        ...(query.departmentId ? { departmentId: query.departmentId } : {}), ...(query.priority ? { priority: query.priority } : {}),
+        ...(query.titleContains ? { title: { contains: query.titleContains } } : {}) };
+      const orderBy: Prisma.TaskOrderByWithRelationInput[] = query.view === 'overdue' || query.view === 'due_soon'
+        ? [{ dueAt: 'asc' }, { id: 'asc' }] : [{ priority: 'desc' }, { dueAt: 'asc' }, { id: 'asc' }];
+      const total = await tx.task.count({ where });
+      // Counted in SQL so the assistant never has to count list items itself.
+      const overdueTotal = query.view === 'overdue' ? total : query.view === 'due_soon' ? 0
+        : await tx.task.count({ where: { ...where, dueAt: { lt: query.now } } });
+      const items = await tx.task.findMany({ where, orderBy, take: query.limit, select: { id: true, title: true, status: true,
+        priority: true, progressPercent: true, dueAt: true, assignee: { select: { displayName: true } }, department: { select: { name: true } } } });
+      return { notAnEmployee: false, total, overdueTotal, items };
+    });
+  }
+  /** Read model for the AI assistant (task:read): one task with checklist progress and the 3 latest comments. */
+  getForAssistant(actorId: string, organizationId: string, taskId: string) {
+    return this.transaction(actorId, organizationId, [PERMISSIONS.TASK_READ], async (tx) => {
+      const task = await tx.task.findUnique({ where: { organizationId_id: { organizationId, id: taskId } }, select: { id: true, title: true,
+        description: true, status: true, priority: true, progressPercent: true, dueAt: true, createdAt: true, updatedAt: true,
+        assignee: { select: { displayName: true } }, creator: { select: { displayName: true } }, department: { select: { name: true } },
+        reviewer: { select: { employee: { select: { displayName: true } } } } } });
+      if (!task) return null;
+      const [checklistDone, checklistTotal, comments] = await Promise.all([
+        tx.taskChecklistItem.count({ where: { organizationId, taskId, isCompleted: true } }),
+        tx.taskChecklistItem.count({ where: { organizationId, taskId } }),
+        tx.taskComment.findMany({ where: { organizationId, taskId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 3,
+          select: { body: true, createdAt: true, authorMembership: { select: { employee: { select: { displayName: true } }, user: { select: { displayName: true } } } } } }),
+      ]);
+      return { task, checklistDone, checklistTotal, comments };
     });
   }
   getById(actorId: string, organizationId: string, taskId: string): Promise<TaskResponse> {

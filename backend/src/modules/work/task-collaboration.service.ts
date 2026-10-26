@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { fileVisibility } from '../files/file-visibility';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthorizationService } from '../rbac/authorization.service';
@@ -53,7 +54,7 @@ export class TaskCollaborationService {
   linkAttachment(actorId: string, organizationId: string, taskId: string, input: LinkTaskAttachmentDto) {
     return this.transaction(actorId, organizationId, 'POST', 'attachments', async (tx) => {
       await this.task(tx, organizationId, taskId, true);
-      await this.files.availableTaskReference(organizationId, input.fileId, tx);
+      await this.files.availableTaskReference(organizationId, input.fileId, tx, actorId);
       const existing = await tx.taskAttachment.findUnique({ where: { organizationId_taskId_fileId: {
         organizationId, taskId, fileId: input.fileId } }, select: attachmentProjection });
       if (existing) return existing;
@@ -70,7 +71,7 @@ export class TaskCollaborationService {
       // Resolve the cursor even if its file was soft-deleted, so paging can continue.
       const cursor = query.after ? await tx.taskAttachment.findFirst({ where: { ...scope, id: query.after }, select: { id: true, createdAt: true } }) : null;
       if (query.after && !cursor) throw new BadRequestException();
-      const rows = await tx.taskAttachment.findMany({ where: { ...scope, ...boundary(cursor), file: { organizationId, status: 'AVAILABLE' } },
+      const rows = await tx.taskAttachment.findMany({ where: { ...scope, ...boundary(cursor), file: { organizationId, status: 'AVAILABLE', ...await fileVisibility(this.authorization, tx, actorId, organizationId) } },
         select: attachmentProjection, orderBy: [...chronology], take: query.limit + 1 });
       return page(rows, query.limit);
     });

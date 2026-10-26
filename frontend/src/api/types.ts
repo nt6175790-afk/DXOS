@@ -291,6 +291,19 @@ export interface AiGenerateRequest {
   metadata?: { purpose: 'general' };
 }
 
+/** A record the answer is based on. `href` is an internal route. */
+export interface AiCitation {
+  type: 'task' | 'approval' | 'leave' | 'document' | 'employee' | 'department' | 'event' | 'attendance' | 'schedule' | 'metric';
+  id: string | null;
+  label: string;
+  href: string;
+}
+
+export interface AiNumericCheck {
+  status: 'PASS' | 'WARN' | 'NOT_APPLICABLE';
+  unmatchedCount: number;
+}
+
 export interface AiGenerateResponse {
   id: string;
   organizationId: string;
@@ -298,12 +311,15 @@ export interface AiGenerateResponse {
   provider: string;
   model: string;
   text: string;
-  finishReason: 'stop' | 'length';
+  finishReason: 'stop' | 'length' | 'tool_limit';
   usage: {
     inputTokens: number;
     outputTokens: number;
     totalTokens: number;
   };
+  /** Present when the agent answered with tools; older servers omit these fields. */
+  citations?: AiCitation[];
+  numericCheck?: AiNumericCheck;
 }
 
 export interface AiInsightsResponse {
@@ -338,6 +354,8 @@ export interface AuditListParams extends PaginationParams {
 
 // === Permission keys & discovery ===
 export type Permission =
+  | 'user:read' | 'user:create' | 'user:update' | 'user:delete'
+  | 'role:create' | 'role:update' | 'role:delete'
   | 'document:read' | 'document:create' | 'document:update' | 'document:delete'
   | 'document:download' | 'document:sensitive:read' | 'document:manage'
   | 'automation:read' | 'automation:create' | 'automation:update' | 'automation:delete' | 'automation:manage'

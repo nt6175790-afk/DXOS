@@ -27,6 +27,7 @@ try {
   const tsconfig = ['--tsconfig', 'backend/tsconfig.json'];
   run('Demo administrator', [tsx, ...tsconfig, 'backend/scripts/seed-demo-admin.ts']);
   run('Demo dataset', [tsx, ...tsconfig, 'backend/scripts/demo-container-seed.ts']);
+  run('Agreed business roles', [tsx, ...tsconfig, 'backend/scripts/seed-demo-roles.ts']);
   console.log('Demo migration/status/drift/seed PASS. Use the private local demo password to sign in.');
 } catch (error) {
   console.error('Demo bootstrap stopped at a required setup step:', error.message === 'Invalid URL' ? 'database configuration' : error.message);

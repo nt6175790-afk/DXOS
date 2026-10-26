@@ -12,7 +12,7 @@ Link mã nguồn: https://github.com/nt6175790-afk/DXOS
 - MySQL Community 8.0.44 đang chạy ở localhost:3306.
 - Cổng 3000 (backend) và 5173 (frontend) đang trống.
 
-Demo cơ bản không cần Docker, OpenAI API key, Keycloak, OpenBao hoặc ClamAV. Các tích hợp này có hướng dẫn riêng trong README; AI dùng mock offline trong lượt demo này.
+Demo cơ bản không cần Docker, API key AI, Keycloak, OpenBao hoặc ClamAV. Các tích hợp này có hướng dẫn riêng trong README; AI dùng mock offline trong lượt demo này.
 
 Lệnh bên dưới dùng PowerShell trên Windows. Dùng npm.cmd để tránh lỗi chặn script npm.ps1. Với Linux/macOS, thay npm.cmd bằng npm và Copy-Item bằng cp.
 
@@ -79,9 +79,12 @@ npm.cmd run db:migrate:deploy
 npm.cmd run db:migrate:status
 npm.cmd --workspace @dx-os/backend run seed:demo-admin
 npm.cmd --workspace @dx-os/backend run seed:demo
+npm.cmd --workspace @dx-os/backend run seed:demo-roles
 ```
 
 Migration status phải báo database đã cập nhật. Seed tạo tổ chức dxos-demo, thành viên ACTIVE và quyền theo cơ chế RBAC hiện có. seed:demo-admin đặt/cập nhật mật khẩu admin theo DEMO_ADMIN_PASSWORD; seed:demo dùng cùng mật khẩu cho thành viên demo mới, giữ mật khẩu thành viên đã tồn tại. Chỉ dùng các seed này trên database demo, không dùng production.
+
+`seed:demo-roles` có trong nhánh hardening kế tiếp v0.2.0, xem [ma trận bốn tài khoản](demo-business-permissions.md). Nếu đang chạy tag v0.2.0 cũ, bỏ qua lệnh này; tag cũ không được thay đổi. Bản hardening tạo đúng vai trò kinh doanh/kỹ thuật/kho vận/nhân sự, không cấp quyền rộng chỉ để thử AI.
 
 ## 4. Khởi động và đăng nhập
 
@@ -113,7 +116,7 @@ Giữ cả hai terminal đang chạy. Dừng bằng Ctrl+C khi test xong. Nhữn
 - Có tổ chức demo; các trang phòng ban, nhân sự, công việc, tài liệu và thông báo tải được.
 - Xem vai trò/thành viên bằng tài khoản admin demo; quyền được kiểm tra theo tổ chức.
 - Đăng xuất rồi truy cập trang cần đăng nhập: phải đăng nhập lại.
-- AI mock phục vụ demo offline; không coi kết quả này là kiểm thử OpenAI thật.
+- Trợ lý AI chạy mock offline: hiểu câu hỏi mẫu (ví dụ "Có việc nào đang quá hạn không?", "Công ty có bao nhiêu phòng ban?", "Hôm nay tôi làm ca mấy giờ?") và trả lời từ dữ liệu thật qua cùng bộ công cụ chỉ đọc, kèm nút nguồn. Không coi kết quả này là kiểm thử model thật; cấu hình gpt-oss xem mục Trợ lý AI trong README.
 
 ## Lỗi thường gặp
 

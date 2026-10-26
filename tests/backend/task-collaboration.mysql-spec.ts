@@ -310,7 +310,7 @@ mysqlDescribe('DXOS-WORK-002 tenant-safe task collaboration and progress', () =>
     expect(comments.items).toHaveLength(1); expect(attachments.items.map((r: { id: string }) => r.id)).toEqual([link]);
   });
   it('Files reference boundary returns only public task metadata', async () => {
-    const row = await db.$transaction((tx) => app.get(FilesService).availableTaskReference(org, file, tx));
+    const row = await db.$transaction((tx) => app.get(FilesService).availableTaskReference(org, file, tx, actor));
     expect(Object.keys(row).sort()).toEqual(['contentType', 'id', 'originalFilename', 'size']);
   });
 });

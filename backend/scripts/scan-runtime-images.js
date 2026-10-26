@@ -8,8 +8,8 @@ const services = ['backend', 'frontend', 'keycloak', 'openbao', 'openbao-agent',
 const common = ['run', '--rm', '-v', 'dxos-security_trivy_cache:/cache', '-v', output + ':/out', '-v', '/var/run/docker.sock:/var/run/docker.sock:ro', 'aquasec/trivy:0.76.0'];
 const results = [];
 const imagesOnly = process.argv.includes('--images-only');
-// Match the workflow's immutable pull: pulling by digest need not create a tag.
-const images = { backend:'dxos-security-backend', frontend:'dxos-security-frontend', keycloak:'quay.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244', openbao:'dxos-security-openbao-oss', 'openbao-agent':'dxos-security-openbao-oss', redis:'dxos-security-valkey-oss', clamav:'dxos-security-clamav-oss', apisix:'dxos-security-apisix-oss', waf:'dxos-security-waf-oss' };
+// Resolve each built image to its immutable ID, including the patched Keycloak runtime used by Compose.
+const images = { backend:'dxos-security-backend', frontend:'dxos-security-frontend', keycloak:'dxos-security-keycloak', openbao:'dxos-security-openbao-oss', 'openbao-agent':'dxos-security-openbao-oss', redis:'dxos-security-valkey-oss', clamav:'dxos-security-clamav-oss', apisix:'dxos-security-apisix-oss', waf:'dxos-security-waf-oss' };
 for (const service of services) {
   const inspected = spawnSync('docker', imagesOnly ? ['image', 'inspect', images[service], '--format', '{{.Id}}'] : ['inspect', 'dxos-security-' + service + '-1', '--format', '{{.Image}}'], { encoding: 'utf8' });
   const image = inspected.stdout?.trim();

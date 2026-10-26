@@ -5,5 +5,5 @@ import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { AnalyticsRepository } from './analytics.repository';
 import { PerformanceAnalyticsProvider } from './performance-analytics.provider';
-@Module({ imports: [AuthModule, RbacModule], controllers: [ReportsController], providers: [ReportsService, AnalyticsRepository, PerformanceAnalyticsProvider] })
+@Module({ imports: [AuthModule, RbacModule], controllers: [ReportsController], providers: [ReportsService, AnalyticsRepository, PerformanceAnalyticsProvider], exports: [ReportsService] })
 export class ReportsModule {}

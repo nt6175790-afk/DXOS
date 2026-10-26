@@ -33,6 +33,7 @@ must exclude node_modules, private envs, database dumps, and local backups.
 | Component | Upstream license / evidence | Distribution boundary |
 | --- | --- | --- |
 | Keycloak 26.8.1 | [Apache-2.0](licenses/infrastructure/keycloak.txt) | Separate IdP image; bundled dependencies have their own notices |
+| Amazon Corretto OpenJDK 21 | [GPL-2.0 with Classpath Exception](https://github.com/corretto/corretto-21/blob/21.0.13.0.10/LICENSE) and [additional notices](https://github.com/corretto/corretto-21/blob/21.0.13.0.10/ADDITIONAL_LICENSE_INFO) | Patched Java runtime for the Keycloak image; vendor legal notices remain bundled in that image |
 | Apache APISIX 3.19.0 | [LICENSE](licenses/infrastructure/apisix.txt), [NOTICE](licenses/infrastructure/apisix-notice.txt) | Preserve upstream notices and bundled-component terms |
 | OpenBao 2.7.1 | [MPL-2.0](licenses/infrastructure/openbao.txt) | File-level source obligations must be assessed if redistributing modified covered software |
 | Valkey 9.1.2 | [BSD-3-Clause](licenses/infrastructure/valkey.txt) | Separate server; preserve upstream notices |

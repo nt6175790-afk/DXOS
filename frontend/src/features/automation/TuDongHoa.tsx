@@ -13,6 +13,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import {
   automationApi,
@@ -22,6 +23,9 @@ import {
 
 export function AutomationPage() {
   const { currentOrg } = useOrganization();
+  const { hasPermission } = usePermission();
+  const canManage = hasPermission('automation:manage');
+  const canUpdate = canManage || hasPermission('automation:update');
   const orgId = currentOrg?.id;
 
   const [rules, setRules] = useState<AutomationRule[]>([]);
@@ -54,7 +58,7 @@ export function AutomationPage() {
   }, [loadData]);
 
   const handleToggleRule = async (ruleId: string, currentStatus: boolean) => {
-    if (!orgId) return;
+    if (!orgId || !canUpdate) return;
     try {
       await automationApi.toggleRule(orgId, ruleId, !currentStatus);
       setRules((prev) =>
@@ -66,7 +70,7 @@ export function AutomationPage() {
   };
 
   const handleRunScan = async () => {
-    if (!orgId) return;
+    if (!orgId || !canManage) return;
     try {
       setRunningScan(true);
       setScanMessage(null);
@@ -116,7 +120,7 @@ export function AutomationPage() {
           </button>
           <button
             onClick={handleRunScan}
-            disabled={runningScan}
+            disabled={runningScan || !canManage}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-colors disabled:opacity-50"
             data-testid="btn-run-automation-scan"
           >
@@ -290,6 +294,7 @@ export function AutomationPage() {
                       <td className="px-6 py-4 text-center">
                         <button
                           type="button"
+                          disabled={!canUpdate}
                           onClick={() => handleToggleRule(rule.id, rule.isActive)}
                           className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                             rule.isActive ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'

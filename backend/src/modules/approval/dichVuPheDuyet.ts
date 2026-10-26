@@ -822,6 +822,37 @@ export class ApprovalService {
     });
   }
 
+  /**
+   * Read model for the AI assistant (approval:read). Same scope rule as `list` (callers without an approval grant
+   * see only their own requests) but strictly read-only: no leave backfill. PAYROLL requests need payroll:read.
+   */
+  async pendingForAssistant(actorUserId: string, organizationId: string, query: { type?: ApprovalRequestType; mine?: boolean; limit: number }) {
+    return this.transaction(actorUserId, organizationId, [PERMISSIONS.APPROVAL_READ], async (tx) => {
+      const canApprove =
+        (await this.authorization.can(actorUserId, PERMISSIONS.APPROVAL_APPROVE, organizationId, tx)) ||
+        (await this.authorization.can(actorUserId, PERMISSIONS.APPROVAL_MANAGE, organizationId, tx)) ||
+        (await this.authorization.can(actorUserId, PERMISSIONS.LEAVE_APPROVE, organizationId, tx)) ||
+        (await this.authorization.can(actorUserId, PERMISSIONS.ATTENDANCE_MANAGE, organizationId, tx));
+      const payrollRead = await this.authorization.can(actorUserId, PERMISSIONS.PAYROLL_READ, organizationId, tx);
+      const scopeMine = query.mine === true || !canApprove;
+      const where: Prisma.ApprovalRequestWhereInput = {
+        organizationId, status: ApprovalStatus.PENDING,
+        ...(scopeMine ? { requester: { userId: actorUserId } } : {}),
+        ...(query.type ? { type: query.type } : {}),
+        ...(!payrollRead ? { NOT: { type: ApprovalRequestType.PAYROLL } } : {}),
+      };
+      const [total, groups, items] = await Promise.all([
+        tx.approvalRequest.count({ where }),
+        tx.approvalRequest.groupBy({ by: ['type'], where, _count: { _all: true } }),
+        tx.approvalRequest.findMany({ where, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: query.limit,
+          select: { id: true, type: true, title: true, createdAt: true,
+            requester: { select: { displayName: true, department: { select: { name: true } } } } } }),
+      ]);
+      return { scope: scopeMine ? 'mine' as const : 'organization' as const, total,
+        byType: Object.fromEntries(groups.map((g) => [g.type, g._count._all])), items };
+    });
+  }
+
   async getById(actorUserId: string, organizationId: string, approvalId: string): Promise<ApprovalRequestResponse> {
     return this.transaction(actorUserId, organizationId, [PERMISSIONS.APPROVAL_READ], async (tx) => {
       const approval = await tx.approvalRequest.findUnique({

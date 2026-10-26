@@ -61,6 +61,21 @@ export class EmployeesService {
     });
   }
 
+  /**
+   * Read model for the AI assistant (employee:read): find employees by name or code.
+   * The utf8mb4_unicode_ci collation makes the match case- and accent-insensitive ("Thu Ha" finds "Thu Hà").
+   */
+  searchForAssistant(actorId: string, organizationId: string, query: { text: string; departmentId?: string; limit: number }) {
+    return this.transaction(actorId, organizationId, PERMISSIONS.EMPLOYEE_READ, async (tx) => {
+      const where: Prisma.EmployeeWhereInput = { organizationId, ...(query.departmentId ? { departmentId: query.departmentId } : {}),
+        OR: [{ displayName: { contains: query.text } }, { employeeCode: { contains: query.text } }] };
+      const total = await tx.employee.count({ where });
+      const items = await tx.employee.findMany({ where, orderBy: [{ status: 'asc' }, { displayName: 'asc' }, { id: 'asc' }], take: query.limit,
+        select: { id: true, employeeCode: true, displayName: true, jobTitle: true, status: true, department: { select: { name: true } } } });
+      return { total, items };
+    });
+  }
+
   getById(actorId: string, organizationId: string, employeeId: string): Promise<EmployeeResponse> {
     return this.transaction(actorId, organizationId, PERMISSIONS.EMPLOYEE_READ, (tx) => this.find(tx, organizationId, employeeId));
   }

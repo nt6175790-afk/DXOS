@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { usePermission } from '@/hooks/usePermission';
 import { listLeaveRequests, LeaveRequest, LeaveStatus, LeaveType } from '@/api/leave';
+import { getMySchedule } from '@/api/self-service';
 import { listEmployees } from '@/api/employees';
 import type { Employee } from '@/api/types';
 import { CreateLeaveModal } from './CreateLeaveModal';
@@ -32,9 +33,11 @@ export function LeavePage() {
   const canRead = hasPermission('leave:read');
   const canCreate = hasPermission('leave:create');
   const canApprove = hasPermission('leave:approve');
+  const canCancelOthers = canApprove || hasPermission('leave:cancel');
+  const canReadEmployees = hasPermission('employee:read');
 
   const [activeTab, setActiveTab] = useState<'my' | 'approvals'>('my');
-  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
+  const [currentEmployee, setCurrentEmployee] = useState<Pick<Employee, 'id' | 'employeeCode' | 'displayName'> | null>(null);
 
   // Lists
   const [myRequests, setMyRequests] = useState<LeaveRequest[]>([]);
@@ -58,7 +61,9 @@ export function LeavePage() {
   useEffect(() => {
     if (!orgId || !user) return;
     let mounted = true;
-    listEmployees(orgId, { userId: user.id })
+    setCurrentEmployee(null);
+    const profile = canReadEmployees ? listEmployees(orgId, { userId: user.id }) : getMySchedule(orgId).then(res => ({ items: res.employee ? [res.employee] : [] }));
+    profile
       .then((res) => {
         if (mounted && res.items.length > 0) {
           setCurrentEmployee(res.items[0]);
@@ -68,7 +73,7 @@ export function LeavePage() {
     return () => {
       mounted = false;
     };
-  }, [orgId, user]);
+  }, [orgId, user, canReadEmployees]);
 
   // Load leave requests
   const loadData = useCallback(async () => {
@@ -553,7 +558,7 @@ export function LeavePage() {
                           )}
 
                           {/* Cancellation action (Creator or Manager) */}
-                          {(req.status === 'PENDING' || req.status === 'APPROVED') && (
+                          {canCreate && (isOwnRequest || canCancelOthers) && (req.status === 'PENDING' || req.status === 'APPROVED') && (
                             <button
                               type="button"
                               onClick={() => setSelectedLeaveToCancel(req)}

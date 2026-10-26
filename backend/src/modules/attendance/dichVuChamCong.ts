@@ -180,6 +180,29 @@ export function calculateWorkedMinutes(
   return grossMinutes;
 }
 
+export type AssistantAttendanceIssue = 'LATE' | 'EARLY_LEAVE' | 'INCOMPLETE' | 'NOT_CHECKED_IN';
+export interface AssistantAttendanceRow {
+  employeeName: string;
+  departmentName: string | null;
+  workDate: Date;
+  issues: AssistantAttendanceIssue[];
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  checkInAt: Date | null;
+  checkOutAt: Date | null;
+}
+
+/** A page size must never become an aggregate cap. Read all matches using stable keyset pages. */
+async function* assistantPages<T extends { id: string }>(load: (cursor?: string) => Promise<T[]>) {
+  let cursor: string | undefined;
+  for (;;) {
+    const page = await load(cursor);
+    if (!page.length) return;
+    yield page;
+    cursor = page[page.length - 1].id;
+  }
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -188,6 +211,76 @@ export class AttendanceService {
     private readonly audit: AuditService,
     private readonly location: AttendanceLocationService,
   ) {}
+
+  /**
+   * Read model for the AI assistant (attendance:read + attendance:manage) over DATE values [fromDay, toDay]:
+   * LATE / EARLY_LEAVE / INCOMPLETE come from attendance records; NOT_CHECKED_IN is a scheduled work day up to `today`
+   * with no check-in and no approved leave (or a record with status ABSENT). No GPS or notes are read.
+   */
+  async exceptionsForAssistant(organizationId: string, actorUserId: string, query: { fromDay: Date; toDay: Date; today: Date;
+    types: AssistantAttendanceIssue[]; departmentId?: string; limit: number }) {
+    return this.prisma.$transaction(async (tx) => {
+      for (const permission of [PERMISSIONS.ATTENDANCE_READ, PERMISSIONS.ATTENDANCE_MANAGE]) {
+        if (!(await this.authz.can(actorUserId, permission, organizationId, tx))) throw new ForbiddenException();
+      }
+      const DAY = 86_400_000;
+      const employee = { organizationId, ...(query.departmentId ? { departmentId: query.departmentId } : {}) };
+      const employeeSelect = { select: { displayName: true, department: { select: { name: true } } } };
+      const rows: AssistantAttendanceRow[] = [];
+      const recorded = new Set<string>();
+      for await (const records of assistantPages(cursor => tx.attendanceRecord.findMany({
+        where: { organizationId, workDate: { gte: query.fromDay, lte: query.toDay }, employee },
+        orderBy: { id: 'asc' }, take: 500, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: { id: true, employeeId: true, workDate: true, status: true, checkInAt: true, checkOutAt: true, lateMinutes: true,
+          earlyLeaveMinutes: true, employee: employeeSelect },
+      }))) {
+        for (const record of records) {
+          recorded.add(record.employeeId + '|' + record.workDate.getTime());
+          const issues: AssistantAttendanceIssue[] = [];
+          if (record.lateMinutes > 0 || record.status === AttendanceStatus.LATE) issues.push('LATE');
+          if (record.earlyLeaveMinutes > 0) issues.push('EARLY_LEAVE');
+          if (record.status === AttendanceStatus.INCOMPLETE || (!record.checkOutAt && record.workDate < query.today)) issues.push('INCOMPLETE');
+          if (record.status === AttendanceStatus.ABSENT) issues.push('NOT_CHECKED_IN');
+          const wanted = issues.filter((issue) => query.types.includes(issue));
+          if (wanted.length) rows.push({ employeeName: record.employee.displayName, departmentName: record.employee.department?.name ?? null,
+            workDate: record.workDate, issues: wanted, lateMinutes: record.lateMinutes, earlyLeaveMinutes: record.earlyLeaveMinutes,
+            checkInAt: record.status === AttendanceStatus.ABSENT ? null : record.checkInAt, checkOutAt: record.checkOutAt });
+        }
+      }
+      const lastScheduledDay = query.toDay < query.today ? query.toDay : query.today;
+      if (query.types.includes('NOT_CHECKED_IN') && query.fromDay <= lastScheduledDay) {
+        for await (const schedules of assistantPages(cursor => tx.workSchedule.findMany({
+          where: { organizationId, workDate: { gte: query.fromDay, lte: lastScheduledDay }, isOff: false, shiftId: { not: null },
+            employee: { ...employee, status: EmployeeStatus.ACTIVE } },
+          orderBy: { id: 'asc' }, take: 500, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          select: { id: true, employeeId: true, workDate: true, employee: employeeSelect },
+        }))) {
+          const leaves = await tx.leaveRequest.findMany({
+            where: { organizationId, status: LeaveStatus.APPROVED, employeeId: { in: [...new Set(schedules.map((s) => s.employeeId))] },
+              startsAt: { lt: new Date(lastScheduledDay.getTime() + DAY - VIETNAM_OFFSET_MS) },
+              endsAt: { gt: new Date(query.fromDay.getTime() - VIETNAM_OFFSET_MS) } },
+            select: { employeeId: true, startsAt: true, endsAt: true },
+          });
+          const leavesByEmployee = new Map<string, typeof leaves>();
+          for (const leave of leaves) leavesByEmployee.set(leave.employeeId, [...(leavesByEmployee.get(leave.employeeId) ?? []), leave]);
+          for (const schedule of schedules) {
+            if (recorded.has(schedule.employeeId + '|' + schedule.workDate.getTime())) continue;
+            const dayStart = schedule.workDate.getTime() - VIETNAM_OFFSET_MS;
+            const onLeave = (leavesByEmployee.get(schedule.employeeId) ?? [])
+              .some((l) => l.startsAt.getTime() < dayStart + DAY && l.endsAt.getTime() > dayStart);
+            if (onLeave) continue;
+            rows.push({ employeeName: schedule.employee.displayName, departmentName: schedule.employee.department?.name ?? null,
+              workDate: schedule.workDate, issues: ['NOT_CHECKED_IN'], lateMinutes: 0, earlyLeaveMinutes: 0, checkInAt: null, checkOutAt: null });
+          }
+        }
+      }
+      const byName = new Intl.Collator('vi');
+      rows.sort((a, b) => b.workDate.getTime() - a.workDate.getTime() || byName.compare(a.employeeName, b.employeeName));
+      const byType: Record<string, number> = {};
+      for (const row of rows) for (const issue of row.issues) byType[issue] = (byType[issue] ?? 0) + 1;
+      return { total: rows.length, byType, items: rows.slice(0, query.limit) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 30_000 });
+  }
 
   private async resolveActiveEmployee(tx: Prisma.TransactionClient, organizationId: string, userId: string) {
     const employee = await tx.employee.findUnique({

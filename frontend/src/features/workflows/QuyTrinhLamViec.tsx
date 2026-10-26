@@ -15,6 +15,7 @@ import {
   FileCheck,
   UserCheck,
 } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import {
   workflowsApi,
@@ -25,6 +26,11 @@ import {
 
 export function WorkflowsPage() {
   const { currentOrg } = useOrganization();
+  const { hasPermission } = usePermission();
+  const canManage = hasPermission('workflow:manage');
+  const canCreate = canManage || hasPermission('workflow:create');
+  const canUpdate = canManage || hasPermission('workflow:update');
+  const canCancel = canManage || hasPermission('workflow:cancel');
   const orgId = currentOrg?.id;
 
   const [instances, setInstances] = useState<WorkflowInstance[]>([]);
@@ -71,9 +77,7 @@ export function WorkflowsPage() {
       const def = definitions.find((d) => d.id === definitionId);
       const newInst = await workflowsApi.startWorkflow(orgId, {
         workflowDefinitionId: definitionId,
-        title: `${def?.name || 'Quy trình mới'} - Nhân viên Demo`,
-        entityType: 'EMPLOYEE_DOCUMENT',
-        entityId: 'demo-doc-001',
+        title: def?.name || 'Quy trình mới',
       });
       setActionSuccess(`Khởi chạy thành công quy trình "${newInst.title}"!`);
       await loadData();
@@ -91,7 +95,7 @@ export function WorkflowsPage() {
       setActionLoading(true);
       setError(null);
       const updated = await workflowsApi.confirmStep(orgId, instanceId, stepId, {
-        comments: confirmComments || 'HR đã rà soát và xác nhận gia hạn hợp đồng lao động.',
+        comments: confirmComments || undefined,
       });
       setConfirmingStepId(null);
       setConfirmComments('');
@@ -152,7 +156,7 @@ export function WorkflowsPage() {
             <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Làm mới
           </button>
-          {definitions.length > 0 && (
+          {canCreate && definitions.length > 0 && (
             <button
               onClick={() => handleStartWorkflow(definitions[0].id)}
               disabled={actionLoading}
@@ -160,7 +164,7 @@ export function WorkflowsPage() {
               data-testid="btn-start-demo-workflow"
             >
               <Play className="w-4 h-4" />
-              Khởi chạy quy trình gia hạn
+              Khởi chạy quy trình
             </button>
           )}
         </div>
@@ -379,7 +383,7 @@ export function WorkflowsPage() {
                   >
                     Trạng thái: {selectedInstance.status}
                   </span>
-                  {selectedInstance.status !== 'COMPLETED' && selectedInstance.status !== 'CANCELLED' && (
+                  {canCancel && selectedInstance.status !== 'COMPLETED' && selectedInstance.status !== 'CANCELLED' && (
                     <button
                       onClick={() => handleCancelWorkflow(selectedInstance.id)}
                       disabled={actionLoading}
@@ -497,12 +501,12 @@ export function WorkflowsPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleConfirmStep(selectedInstance.id, step.id)}
-                                  disabled={actionLoading}
+                                  disabled={actionLoading || !canUpdate}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors disabled:opacity-50"
                                   data-testid="btn-confirm-workflow-step"
                                 >
                                   <Check className="w-3.5 h-3.5" />
-                                  {actionLoading ? 'Đang xác nhận...' : 'Xác nhận gia hạn & Tiếp tục'}
+                                  {actionLoading ? 'Đang xác nhận...' : 'Xác nhận và tiếp tục'}
                                 </button>
                               </div>
                             </div>

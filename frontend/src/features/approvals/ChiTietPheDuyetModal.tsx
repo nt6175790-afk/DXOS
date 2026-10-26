@@ -11,6 +11,7 @@ import {
   FileText,
   Ban,
 } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { approvalsApi } from '@/api/approvals';
@@ -56,6 +57,7 @@ interface Props {
 
 export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onSuccess }: Props) {
   const { user } = useAuth();
+  const { hasPermission } = usePermission();
   const { currentOrg } = useOrganization();
   const orgId = currentOrg?.id;
 
@@ -70,7 +72,9 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
 
   const isRequester = approval.requester.userId === user?.id;
   const isPending = approval.status === 'PENDING';
-  const allowApproveActions = canApprove && !isRequester && isPending;
+  const allowApproveActions = canApprove && hasPermission('approval:approve') && !isRequester && isPending;
+  const allowRejectActions = hasPermission('approval:reject') && !isRequester && isPending;
+  const allowCancel = hasPermission('approval:create') && (isRequester || hasPermission('approval:manage')) && isPending;
 
   const handleApprove = async () => {
     setIsLoading(true);
@@ -479,7 +483,7 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
         {mode === 'view' && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50">
             <div>
-              {isPending && isRequester && (
+              {allowCancel && (
                 <button
                   type="button"
                   onClick={() => setMode('cancel')}
@@ -499,8 +503,7 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
                 Đóng
               </button>
 
-              {allowApproveActions && (
-                <>
+              {allowRejectActions && (
                   <button
                     type="button"
                     onClick={() => setMode('reject')}
@@ -508,6 +511,8 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
                   >
                     <XCircle className="w-4 h-4" /> Từ chối
                   </button>
+              )}
+              {allowApproveActions && (
                   <button
                     type="button"
                     onClick={() => setMode('approve')}
@@ -515,7 +520,6 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
                   >
                     <CheckCircle2 className="w-4 h-4" /> Phê duyệt
                   </button>
-                </>
               )}
             </div>
           </div>

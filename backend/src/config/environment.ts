@@ -3,6 +3,11 @@ export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 
 export type NodeEnvironment = (typeof NODE_ENVIRONMENTS)[number];
 export type LogLevel = (typeof LOG_LEVELS)[number];
+export const AI_PROVIDERS = ['mock', 'ollama', 'vllm', 'openai', 'gemini', 'disabled'] as const;
+export type AiProviderName = (typeof AI_PROVIDERS)[number];
+/** Providers served through the shared OpenAI-compatible adapter (open-weight models). */
+export const OPEN_WEIGHT_AI_PROVIDERS: readonly AiProviderName[] = ['ollama', 'vllm'];
+const OLLAMA_CLOUD_HOST = 'ollama.com';
 
 export interface AppConfiguration {
   environment: NodeEnvironment;
@@ -16,10 +21,15 @@ export interface AppConfiguration {
   jwtAccessSecret?: string;
   jwtAccessTtlSeconds: number;
   jwtRefreshTtlSeconds: number;
-  aiProvider: 'mock' | 'openai' | 'gemini' | 'disabled';
+  aiProvider: AiProviderName;
   aiModel: string;
   aiApiKey?: string;
   aiTimeoutMs: number;
+  /** OpenAI-compatible endpoint for `ollama`/`vllm`; server configuration only, never from requests. */
+  aiBaseUrl?: string;
+  aiReasoningEffort: 'low' | 'medium' | 'high';
+  aiAgentMaxSteps: number;
+  aiAgentTotalTimeoutMs: number;
   rateLimitLoginLimit: number;
   rateLimitLoginWindowSeconds: number;
   rateLimitRefreshLimit: number;
@@ -234,10 +244,16 @@ function readBoundedInteger(
   return parsed;
 }
 
+const DEFAULT_AI_MODELS: Record<AiProviderName, string> = {
+  mock: 'mock-v1', disabled: 'mock-v1', openai: 'gpt-4o-mini', gemini: 'gemini-1.5-flash',
+  ollama: 'gpt-oss:120b', vllm: 'openai/gpt-oss-120b',
+};
+
 function readAiModel(source: EnvironmentSource, provider: AppConfiguration['aiProvider']): string {
-  const defaultModel = provider === 'openai' ? 'gpt-4o-mini' : provider === 'gemini' ? 'gemini-1.5-flash' : 'mock-v1';
-  const value = source.AI_MODEL ?? defaultModel;
-  if (value.length < 1 || value.length > 100 || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(value)) {
+  const value = source.AI_MODEL ?? DEFAULT_AI_MODELS[provider];
+  // '/' is allowed only for open-weight servers (vLLM serves Hugging Face ids such as openai/gpt-oss-120b).
+  const pattern = OPEN_WEIGHT_AI_PROVIDERS.includes(provider) ? /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$/ : /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/;
+  if (value.length < 1 || value.length > 100 || !pattern.test(value) || value.includes('..') || value.includes('//')) {
     configurationError('AI_MODEL', 'must be a safe model identifier');
   }
   if (provider === 'mock' && value !== 'mock-v1') {
@@ -258,10 +274,39 @@ function readAiApiKey(source: EnvironmentSource, provider: AppConfiguration['aiP
   if ((provider === 'openai' || provider === 'gemini') && environment !== 'test' && !value && source.ALLOW_EMPTY_AI_KEY !== 'true') {
     configurationError('AI_API_KEY', 'is required when AI_PROVIDER is ' + provider);
   }
-  if (value !== undefined && (value.length < 1 || value.length > 4096)) {
+  if (value !== undefined && (value.length < 1 || value.length > 4096 || /\s/.test(value))) {
     configurationError('AI_API_KEY', 'must be a non-empty value');
   }
   return value;
+}
+
+/**
+ * Endpoint of an OpenAI-compatible server (Ollama or vLLM), e.g. https://ollama.com/v1.
+ * Read from server configuration only; validated at startup so a bad value stops the process (SSRF guard).
+ */
+function readAiBaseUrl(source: EnvironmentSource, provider: AppConfiguration['aiProvider']): string | undefined {
+  if (!OPEN_WEIGHT_AI_PROVIDERS.includes(provider)) return undefined;
+  const raw = source.AI_BASE_URL ?? (provider === 'ollama' ? 'http://localhost:11434/v1' : undefined);
+  if (!raw) configurationError('AI_BASE_URL', 'is required when AI_PROVIDER is ' + provider);
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    configurationError('AI_BASE_URL', 'must be an absolute http(s) URL');
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || raw.length > 2048) {
+    configurationError('AI_BASE_URL', 'must be an http(s) URL without credentials, query or fragment');
+  }
+  return url.toString().replace(/\/+$/, '');
+}
+
+export function isOllamaCloudUrl(baseUrl: string | undefined): boolean {
+  if (!baseUrl) return false;
+  try {
+    return new URL(baseUrl).hostname === OLLAMA_CLOUD_HOST;
+  } catch {
+    return false;
+  }
 }
 
 export function getAppConfiguration(source: EnvironmentSource = process.env): AppConfiguration {
@@ -273,20 +318,30 @@ export function getAppConfiguration(source: EnvironmentSource = process.env): Ap
   }
 
   const corsOrigins = parseCorsOrigins(corsOriginsValue ?? developmentCorsOrigins.join(','));
-  const aiTimeout = source.AI_TIMEOUT_MS ?? '5000';
-  if (!/^\d+$/.test(aiTimeout) || Number(aiTimeout) < 1 || Number(aiTimeout) > 30000) configurationError('AI_TIMEOUT_MS', 'must be an integer from 1 to 30000');
   const rateLimitDefaults = environment === 'production'
     ? { loginLimit: 10, refreshLimit: 30 }
     : { loginLimit: 100, refreshLimit: 300 };
 
-  const aiProvider = readEnum(source, 'AI_PROVIDER', ['mock', 'openai', 'gemini', 'disabled'] as const, environment === 'production' ? 'disabled' : 'mock');
+  const aiProvider = readEnum(source, 'AI_PROVIDER', AI_PROVIDERS, environment === 'production' ? 'disabled' : 'mock');
+  const openWeight = OPEN_WEIGHT_AI_PROVIDERS.includes(aiProvider);
+  // A 120B model with tool calls needs more than the 5 s default used for hosted APIs.
+  const aiTimeoutMs = readBoundedInteger(source, 'AI_TIMEOUT_MS', openWeight ? 30000 : 5000, 1, 30000);
+  const aiBaseUrl = readAiBaseUrl(source, aiProvider);
+  const aiApiKey = readAiApiKey(source, aiProvider, environment);
+  if (aiProvider === 'ollama' && isOllamaCloudUrl(aiBaseUrl) && !aiApiKey && environment !== 'test') {
+    configurationError('AI_API_KEY', 'is required for Ollama Cloud');
+  }
 
   return {
     environment,
     aiProvider,
     aiModel: readAiModel(source, aiProvider),
-    aiApiKey: readAiApiKey(source, aiProvider, environment),
-    aiTimeoutMs: Number(aiTimeout),
+    aiApiKey,
+    aiTimeoutMs,
+    aiBaseUrl,
+    aiReasoningEffort: readEnum(source, 'AI_REASONING_EFFORT', ['low', 'medium', 'high'] as const, 'low'),
+    aiAgentMaxSteps: readBoundedInteger(source, 'AI_AGENT_MAX_STEPS', 3, 1, 5),
+    aiAgentTotalTimeoutMs: readBoundedInteger(source, 'AI_AGENT_TOTAL_TIMEOUT_MS', 45_000, 1_000, 120_000),
     rateLimitLoginLimit: readBoundedInteger(source, 'RATE_LIMIT_LOGIN_LIMIT', rateLimitDefaults.loginLimit, 1, 10_000),
     rateLimitLoginWindowSeconds: readBoundedInteger(source, 'RATE_LIMIT_LOGIN_WINDOW_SECONDS', 60, 1, 86_400),
     rateLimitRefreshLimit: readBoundedInteger(source, 'RATE_LIMIT_REFRESH_LIMIT', rateLimitDefaults.refreshLimit, 1, 10_000),

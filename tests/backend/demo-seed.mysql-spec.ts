@@ -5,6 +5,9 @@ import { PasswordService } from '../../backend/src/modules/auth/password.service
 import { PERMISSION_CATALOG } from '../../backend/src/modules/rbac/permission-catalog';
 import { StorageService } from '../../backend/src/modules/files/storage.service';
 import { seedDemoDataset } from '../../backend/scripts/demo/seed-demo-dataset';
+import { DEMO_ROLES, seedDemoRoles } from '../../backend/scripts/demo/seed-demo-roles';
+import { AuthorizationService } from '../../backend/src/modules/rbac/authorization.service';
+import type { PrismaService } from '../../backend/src/database/prisma.service';
 import { DEMO_ADMIN_EMAIL, DEMO_PEOPLE, demoId } from '../../backend/scripts/demo/demo-fixtures';
 
 class TestStorage extends StorageService {
@@ -112,6 +115,63 @@ mysqlDescribe('demo dataset with real MySQL constraints', () => {
     expect(await db.task.findUnique({ where: { id } })).toMatchObject({ title: 'Operator edit', status: 'IN_PROGRESS' });
     expect((await db.notification.findUniqueOrThrow({ where: { id: notice } })).readAt).toEqual(readAt);
     expect((await db.user.findUniqueOrThrow({ where: { email: 'an.demo@dxos.local' } })).passwordHash === newHash).toBe(true);
+  });
+
+  it('provisions exactly the agreed four business roles, preserves admin/foreign data and is idempotent', async () => {
+    await run();
+    const adminBefore = await db.user.findUniqueOrThrow({ where: { id: admin } });
+    const grantsBefore = await db.rolePermission.findMany({ where: { roleId: role }, orderBy: { id: 'asc' } });
+    const permissionsBefore = await db.permission.findMany({ orderBy: { id: 'asc' } });
+    const foreignBefore = await db.organization.findUnique({ where: { id: foreignOrg } });
+    const seeded = await seedDemoRoles(source);
+    expect(seeded.created).toEqual({ roles: 4, grants: 70, assignments: 4 });
+    const auth = new AuthorizationService(db as unknown as PrismaService);
+    for (const definition of DEMO_ROLES) {
+      const user = await db.user.findUniqueOrThrow({ where: { email: definition.members[0] } });
+      expect(await auth.effectivePermissions(user.id, org)).toEqual([...definition.permissions].sort());
+      for (const permission of ['task:update', 'task:assign', 'role:assign', 'approval:approve', 'approval:reject',
+        'payroll:read', 'payroll:approve', 'compensation:read', 'document:sensitive:read', 'file:delete', 'document:delete'] as const) {
+        expect(await auth.can(user.id, permission, org)).toBe(false);
+      }
+      expect(await auth.can(user.id, 'ai:use', org)).toBe(definition.key === 'demo-engineering');
+      expect(await auth.can(user.id, 'task:read', foreignOrg)).toBe(false);
+    }
+    const auditCount = await db.auditEvent.count({ where: { organizationId: org } });
+    expect((await seedDemoRoles(source)).created).toEqual({ roles: 0, grants: 0, assignments: 0 });
+    expect(await db.auditEvent.count({ where: { organizationId: org } })).toBe(auditCount);
+    expect(await db.user.findUnique({ where: { id: admin } })).toEqual(adminBefore);
+    expect(await db.rolePermission.findMany({ where: { roleId: role }, orderBy: { id: 'asc' } })).toEqual(grantsBefore);
+    expect(await db.permission.findMany({ orderBy: { id: 'asc' } })).toEqual(permissionsBefore);
+    expect(await db.organization.findUnique({ where: { id: foreignOrg } })).toEqual(foreignBefore);
+  });
+
+  it('rejects legacy assignments atomically rather than accumulating demo privileges', async () => {
+    await run();
+    const membership = await db.organizationMembership.findFirstOrThrow({ where: { organizationId: org,
+      user: { email: 'minh-anh.demo@dxos.local' } } });
+    const legacy = await db.role.create({ data: { organizationId: org, key: 'demo-manager', name: 'Legacy manager' } });
+    await db.membershipRole.create({ data: { organizationId: org, membershipId: membership.id, roleId: legacy.id } });
+    const before = await db.auditEvent.count({ where: { organizationId: org } });
+    await expect(seedDemoRoles(source)).rejects.toThrow('EXISTING_DEMO_ASSIGNMENT_CONFLICT');
+    expect(await db.role.count({ where: { organizationId: org } })).toBe(2);
+    expect(await db.membershipRole.count({ where: { organizationId: org } })).toBe(2);
+    expect(await db.auditEvent.count({ where: { organizationId: org } })).toBe(before);
+  });
+
+  it('does not overwrite operator edits to a role or silently keep excessive grants', async () => {
+    await run(); await seedDemoRoles(source);
+    const engineering = await db.role.findUniqueOrThrow({ where: { organizationId_key: { organizationId: org, key: 'demo-engineering' } } });
+    const extra = await db.permission.findUniqueOrThrow({ where: { key: 'task:update' } });
+    await db.rolePermission.create({ data: { roleId: engineering.id, permissionId: extra.id } });
+    await expect(seedDemoRoles(source)).rejects.toThrow('EXISTING_DEMO_ROLE_POLICY_CONFLICT');
+    expect(await db.rolePermission.count({ where: { roleId: engineering.id, permissionId: extra.id } })).toBe(1);
+  });
+
+  it('requires active administrator authority and does not create missing catalog entries', async () => {
+    await run();
+    await db.rolePermission.deleteMany({ where: { roleId: role, permission: { key: 'role:assign' } } });
+    await expect(seedDemoRoles(source)).rejects.toThrow('EXISTING_ADMIN_PERMISSIONS_REQUIRED');
+    expect(await db.role.count({ where: { organizationId: org } })).toBe(1);
   });
   it('rolls back provisioning on an existing email collision without touching that user', async () => {
     const existing = await db.user.create({ data: { email: 'an.demo@dxos.local', displayName: 'Existing user' } });

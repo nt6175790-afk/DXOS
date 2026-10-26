@@ -1,7 +1,8 @@
 name: dxos-security
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
+    image: dxos-security-keycloak
+    build: { context: ../.., dockerfile: backend/deploy/keycloak.Dockerfile }
     command: [start-dev, --import-realm]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: dxos-operator

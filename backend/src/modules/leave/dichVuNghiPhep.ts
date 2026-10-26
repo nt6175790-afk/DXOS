@@ -519,6 +519,29 @@ export class LeaveService {
     });
   }
 
+  /**
+   * Read model for the AI assistant (leave:read): leave requests overlapping [startUtc, endUtc).
+   * Same scope rule as `list`: without leave:approve only the caller's own requests. Reasons and reviewer notes are not read.
+   */
+  async listForAssistant(actorId: string, organizationId: string, query: { startUtc: Date; endUtc: Date; statuses: LeaveStatus[];
+    type?: LeaveType; departmentId?: string; limit: number }) {
+    return this.transaction(actorId, organizationId, [PERMISSIONS.LEAVE_READ], async (tx) => {
+      const canApprove = await this.authorization.can(actorId, PERMISSIONS.LEAVE_APPROVE, organizationId, tx);
+      const where: Prisma.LeaveRequestWhereInput = {
+        organizationId, status: { in: query.statuses }, startsAt: { lt: query.endUtc }, endsAt: { gt: query.startUtc },
+        ...(query.type ? { leaveType: query.type } : {}),
+        ...(!canApprove ? { employee: { userId: actorId } } : query.departmentId ? { employee: { departmentId: query.departmentId } } : {}),
+      };
+      const [total, items] = await Promise.all([
+        tx.leaveRequest.count({ where }),
+        tx.leaveRequest.findMany({ where, orderBy: [{ startsAt: 'asc' }, { id: 'asc' }], take: query.limit,
+          select: { id: true, leaveType: true, startsAt: true, endsAt: true, daysCount: true, status: true,
+            employee: { select: { displayName: true, department: { select: { name: true } } } } } }),
+      ]);
+      return { scope: canApprove ? 'organization' as const : 'mine' as const, total, items };
+    });
+  }
+
   async getById(actorId: string, organizationId: string, leaveId: string): Promise<LeaveRequestResponse> {
     return this.transaction(actorId, organizationId, [PERMISSIONS.LEAVE_READ], async (tx) => {
       const leave = await tx.leaveRequest.findUnique({

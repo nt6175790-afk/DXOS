@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type DepartmentStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthorizationService } from '../rbac/authorization.service';
 import { PERMISSIONS, type PermissionKey } from '../rbac/permission-catalog';
@@ -41,6 +41,34 @@ export class DepartmentsService {
       select: projection, orderBy: { id: 'asc' }, take: query.limit + 1 });
       const items = rows.slice(0, query.limit);
       return { items, nextCursor: rows.length > query.limit ? items[items.length - 1].id : null };
+    });
+  }
+
+  /**
+   * Read model for the AI assistant: departments with active headcount and open-task counts.
+   * Counts are null when the caller lacks employee:read / task:read, mirroring the dashboard. At most 50 departments.
+   */
+  summarizeForAssistant(userId: string, organizationId: string, status: DepartmentStatus | 'ALL') {
+    return this.transaction(userId, organizationId, PERMISSIONS.DEPARTMENT_READ, async (tx) => {
+      const where = { organizationId, ...(status === 'ALL' ? {} : { status }) };
+      const employeeRead = await this.authorization.can(userId, PERMISSIONS.EMPLOYEE_READ, organizationId, tx);
+      const taskRead = await this.authorization.can(userId, PERMISSIONS.TASK_READ, organizationId, tx);
+      const total = await tx.department.count({ where });
+      const rows = await tx.department.findMany({ where, orderBy: [{ name: 'asc' }, { id: 'asc' }], take: 50,
+        select: { id: true, code: true, name: true, status: true } });
+      const ids = rows.map((row) => row.id);
+      const employees = employeeRead ? await tx.employee.groupBy({ by: ['departmentId'],
+        where: { organizationId, status: 'ACTIVE', departmentId: { in: ids } }, _count: { _all: true } }) : [];
+      const tasks = taskRead ? await tx.task.groupBy({ by: ['departmentId'],
+        where: { organizationId, status: { in: ['TODO', 'IN_PROGRESS'] }, departmentId: { in: ids } }, _count: { _all: true } }) : [];
+      const countFor = (groups: { departmentId: string | null; _count: { _all: number } }[], id: string) =>
+        groups.find((group) => group.departmentId === id)?._count._all ?? 0;
+      return {
+        total, hasMore: total > rows.length,
+        items: rows.map((row) => ({ ...row,
+          activeEmployees: employeeRead ? countFor(employees, row.id) : null,
+          openTasks: taskRead ? countFor(tasks, row.id) : null })),
+      };
     });
   }
 

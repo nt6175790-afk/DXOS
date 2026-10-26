@@ -84,6 +84,29 @@ async function main() {
   ok('Unprivileged member login', member.status, 200); token = (await member.json()).accessToken;
   ok('Membership alone does not grant role:read', (await request(prefix + '/roles', { headers: { Authorization: 'Bearer ' + token } })).status, 403);
   await request('/api/v1/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }); token = undefined;
+  phase = 'business role policy';
+  for (const [email, count, canUseAi] of [
+    ['an.demo@dxos.local', 13, false], ['minh-anh.demo@dxos.local', 13, true],
+    ['hoang-nam.demo@dxos.local', 12, false], ['thu-ha.demo@dxos.local', 32, false],
+  ]) {
+    const login = await request('/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: env.DEMO_ADMIN_PASSWORD }) });
+    ok(email + ' login', login.status, 200); token = (await login.json()).accessToken;
+    const memberHeaders = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+    const permissionResponse = await request(prefix + '/permissions', { headers: memberHeaders });
+    ok(email + ' permission discovery', permissionResponse.status, 200);
+    const permissions = (await permissionResponse.json()).permissions;
+    ok(email + ' permission count', permissions.length, count);
+    for (const denied of ['task:update', 'task:assign', 'role:assign', 'approval:approve', 'approval:reject',
+      'payroll:read', 'payroll:approve', 'compensation:read', 'document:sensitive:read']) assert(!permissions.includes(denied));
+    ok(email + ' explicit AI permission', permissions.includes('ai:use'), canUseAi);
+    const answer = await request(prefix + '/ai/generate', { method: 'POST', headers: memberHeaders,
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'Xin chào' }], maxOutputTokens: 256 }) });
+    ok(email + ' AI authorization', answer.status, canUseAi ? 200 : 403);
+    ok(email + ' foreign organization denied', (await request('/api/v1/organizations/' + randomUUID() + '/tasks', { headers: memberHeaders })).status, 403);
+    ok(email + ' logout', (await request('/api/v1/auth/logout', { method: 'POST', headers: memberHeaders })).status, 204);
+    token = undefined;
+  }
   fs.mkdirSync(path.join(root, 'security-artifacts'), { recursive: true });
   fs.writeFileSync(path.join(root, 'security-artifacts/demo-smoke.json'), JSON.stringify({ status: 'PASS', aiMode: 'mock', checks }, null, 2) + '\n');
   console.log('Isolated demo smoke PASS:', checks.length, 'checks. No credentials printed.');

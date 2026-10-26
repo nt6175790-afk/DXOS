@@ -57,7 +57,7 @@ export function SettingsPage() {
     } catch (err) {
       if (isApiError(err)) {
         if (err.error.code === 'FORBIDDEN') {
-          setError('Bạn không có quyền cập nhật thông tin tổ chức (yêu cầu quyền organization:update).');
+          setError('Bạn không có quyền cập nhật tổ chức.');
         } else {
           setError(err.error.message);
         }
@@ -74,17 +74,8 @@ export function SettingsPage() {
   if (!currentOrg) return null;
   if (isPermissionLoading) return <LoadingState message="Đang kiểm tra quyền hạn..." />;
 
-  // If user cannot read organization details and clicks general tab, show forbidden state
-  if (!canReadOrg && activeTab === 'general') {
-    // If they have role:read, automatically route to members tab
-    if (canReadRoles) {
-      setActiveTab('members');
-    } else {
-      return (
-        <ForbiddenState message="Bạn không có quyền xem thông tin cài đặt tổ chức này (yêu cầu quyền organization:read)." />
-      );
-    }
-  }
+  if (!canReadOrg && !canReadRoles) return <ForbiddenState message="Bạn không có quyền xem cài đặt tổ chức." />;
+  const visibleTab = activeTab === 'general' ? (canReadOrg ? 'general' : 'members') : (canReadRoles ? 'members' : 'general');
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -100,10 +91,10 @@ export function SettingsPage() {
             <button
               type="button"
               role="tab"
-              aria-selected={activeTab === 'general'}
+              aria-selected={visibleTab === 'general'}
               onClick={() => setActiveTab('general')}
               className={`flex items-center gap-2 pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'general'
+                visibleTab === 'general'
                   ? 'border-brand-600 text-brand-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
               }`}
@@ -113,25 +104,25 @@ export function SettingsPage() {
             </button>
           )}
 
-          <button
+          {canReadRoles && <button
             type="button"
             role="tab"
-            aria-selected={activeTab === 'members'}
+            aria-selected={visibleTab === 'members'}
             onClick={() => setActiveTab('members')}
             className={`flex items-center gap-2 pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'members'
+              visibleTab === 'members'
                 ? 'border-brand-600 text-brand-600'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
             <Users className="h-4 w-4" aria-hidden="true" />
             Thành viên & Vai trò
-          </button>
+          </button>}
         </div>
       </div>
 
       {/* Tab content */}
-      {activeTab === 'general' && (
+      {visibleTab === 'general' && (
         <div className="card p-6 space-y-6 max-w-2xl">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="h-12 w-12 rounded-lg bg-brand-50 flex items-center justify-center text-brand-600">
@@ -154,7 +145,7 @@ export function SettingsPage() {
               label="Tên tổ chức"
               htmlFor="org-name"
               required
-              hint={!canUpdateOrg ? 'Chỉ xem — cần quyền organization:update để chỉnh sửa' : undefined}
+              hint={!canUpdateOrg ? 'Bạn chỉ có quyền xem.' : undefined}
             >
               <input
                 id="org-name"
@@ -166,7 +157,7 @@ export function SettingsPage() {
               />
             </FormField>
 
-            <FormField label="Mã đường dẫn (Slug)" htmlFor="org-slug" hint="Mã định danh duy nhất của tổ chức trong hệ thống">
+            <FormField label="Mã tổ chức" htmlFor="org-slug">
               <input
                 id="org-slug"
                 className="input-field font-mono text-xs bg-slate-50 text-slate-500 cursor-not-allowed"
@@ -205,7 +196,7 @@ export function SettingsPage() {
         </div>
       )}
 
-      {activeTab === 'members' && <MembersTab />}
+      {visibleTab === 'members' && <MembersTab />}
     </div>
   );
 }

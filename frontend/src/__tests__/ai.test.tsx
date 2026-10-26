@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { AiAssistantPage } from '@/features/ai/AiAssistantPage';
+import { AiConversationProvider } from '@/features/ai/AiConversationProvider';
 import { ToastProvider } from '@/contexts/ToastContext';
 import * as permissionHook from '@/hooks/usePermission';
 import * as orgContextModule from '@/contexts/OrganizationContext';
@@ -244,7 +246,7 @@ describe('AiAssistantPage (DXOS-FRONTEND-006)', () => {
     await user.type(input, 'Câu hỏi đang chờ...');
     await user.click(sendButton);
 
-    expect(screen.getByText(/trợ lý ai đang xử lý câu trả lời/i)).toBeInTheDocument();
+    expect(screen.getByText(/trợ lý ai đang tra cứu dữ liệu/i)).toBeInTheDocument();
     expect(sendButton).toBeDisabled();
     expect(input).toBeDisabled();
 
@@ -261,7 +263,7 @@ describe('AiAssistantPage (DXOS-FRONTEND-006)', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByText(/trợ lý ai đang xử lý câu trả lời/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/trợ lý ai đang tra cứu dữ liệu/i)).not.toBeInTheDocument();
       expect(input).not.toBeDisabled();
     });
   });
@@ -641,6 +643,59 @@ describe('AiAssistantPage (DXOS-FRONTEND-006)', () => {
     });
   });
 
+  // 23. Agent answers: internal source chips, numeric warning, completeness note
+  it('23. shows internal source links, a numeric-check warning and the tool-limit note for agent answers', async () => {
+    mockGenerateAi.mockResolvedValueOnce({
+      id: 'resp-23', organizationId: 'org-1', requestId: 'req-23', provider: 'ollama', model: 'gpt-oss:120b',
+      text: 'Có 2 việc quá hạn.', finishReason: 'tool_limit', usage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
+      numericCheck: { status: 'WARN', unmatchedCount: 1 },
+      citations: [
+        { type: 'task', id: '7c9e6679-7425-40de-944b-e07fc1f90ae7', label: 'Báo cáo Q3', href: '/tasks/7c9e6679-7425-40de-944b-e07fc1f90ae7' },
+        { type: 'task', id: null, label: 'Trang ngoài', href: '//evil.example/x' },
+      ],
+    });
+    render(<MemoryRouter><ToastProvider><AiAssistantPage /></ToastProvider></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Việc nào quá hạn?');
+    await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+    await waitFor(() => expect(screen.getByTestId('ai-citations')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'Báo cáo Q3' })).toHaveAttribute('href', '/tasks/7c9e6679-7425-40de-944b-e07fc1f90ae7');
+    expect(screen.queryByText('Trang ngoài')).not.toBeInTheDocument();
+    expect(screen.getByTestId('ai-numeric-warning')).toHaveTextContent(/chưa đối chiếu được/);
+    expect(screen.getByTestId('ai-numeric-scope')).toHaveTextContent(/chỉ đối chiếu sự xuất hiện/i);
+    expect(screen.getByTestId('ai-tool-limit-note')).toBeInTheDocument();
+  });
+
+  // 24. Suggestions follow permissions
+  it('does not present a numeric PASS as verification of the meaning of an answer', async () => {
+    mockGenerateAi.mockResolvedValueOnce({ id: 'presence', organizationId: 'org-1', requestId: 'presence', provider: 'mock', model: 'mock-v1',
+      text: 'Có 10 nhân viên.', finishReason: 'stop', usage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
+      numericCheck: { status: 'PASS', unmatchedCount: 0 }, citations: [] });
+    render(<MemoryRouter><ToastProvider><AiAssistantPage /></ToastProvider></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Tình hình nhân sự?');
+    await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+    expect(await screen.findByTestId('ai-numeric-scope')).toHaveTextContent(/kiểm tra ý nghĩa tại nguồn/);
+    expect(screen.queryByTestId('ai-numeric-warning')).not.toBeInTheDocument();
+  });
+
+  it('24. only suggests questions the user has permission to ask', async () => {
+    const { unmount } = renderPage();
+    await screen.findByText('mock:mock-v1');
+    expect(screen.getByText(/Hôm nay tôi làm ca mấy giờ\?/)).toBeInTheDocument();
+    expect(screen.queryByText(/Có việc nào đang quá hạn không\?/)).not.toBeInTheDocument();
+    unmount();
+    vi.spyOn(permissionHook, 'usePermission').mockReturnValue({
+      permissions: ['ai:use', 'task:read'],
+      hasPermission: (p) => p === 'ai:use' || p === 'task:read',
+      hasAnyPermission: (...p) => p.some((x) => x === 'ai:use' || x === 'task:read'),
+      isLoading: false, error: null, refreshPermissions: vi.fn(),
+    });
+    renderPage();
+    await screen.findByText('mock:mock-v1');
+    expect(screen.getByText(/Có việc nào đang quá hạn không\?/)).toBeInTheDocument();
+  });
+
   // 22. No API keys exposed in frontend components
   it('22. never exposes AI API keys or provider secrets in the DOM or UI elements', async () => {
     renderPage();
@@ -649,5 +704,117 @@ describe('AiAssistantPage (DXOS-FRONTEND-006)', () => {
     expect(htmlContent).not.toMatch(/AI_API_KEY/i);
     expect(htmlContent).not.toMatch(/openai_api_key/i);
   });
-});
 
+  // 25–28. The conversation is kept for the signed-in session while the user visits other pages
+  describe('session conversation (AiConversationProvider)', () => {
+    const answer = (text: string) => ({
+      id: `resp-${text}`, organizationId: 'org-1', requestId: `req-${text}`, provider: 'mock', model: 'mock-v1',
+      text, finishReason: 'stop', usage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
+    });
+    const session = (showPage: boolean) => (
+      <ToastProvider>
+        <AiConversationProvider>
+          {showPage ? <AiAssistantPage /> : <div>Trang công việc</div>}
+        </AiConversationProvider>
+      </ToastProvider>
+    );
+    const signOut = () => vi.spyOn(authContextModule, 'useAuth').mockReturnValue({
+      user: null, isAuthenticated: false, isLoading: false, login: vi.fn(), loginSso: vi.fn(), logout: vi.fn(),
+    });
+    const signIn = () => vi.spyOn(authContextModule, 'useAuth').mockReturnValue({
+      user: { id: 'usr-1', email: 'test@dxos.local', displayName: 'Test User', accountStatus: 'ACTIVE' },
+      isAuthenticated: true, isLoading: false, login: vi.fn(), loginSso: vi.fn(), logout: vi.fn(),
+    });
+
+    it('25. keeps the conversation and the unsent draft when the user leaves and reopens the assistant', async () => {
+      mockGenerateAi.mockResolvedValueOnce(answer('Trả lời thứ nhất')).mockResolvedValueOnce(answer('Trả lời thứ hai'));
+      const { rerender } = render(session(true));
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Câu hỏi thứ nhất');
+      await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+      await screen.findByText('Trả lời thứ nhất');
+      await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Câu đang soạn');
+
+      rerender(session(false));
+      expect(screen.getByText('Trang công việc')).toBeInTheDocument();
+      expect(screen.queryByText('Trả lời thứ nhất')).not.toBeInTheDocument();
+
+      rerender(session(true));
+      expect(screen.getByText('Câu hỏi thứ nhất')).toBeInTheDocument();
+      expect(screen.getByText('Trả lời thứ nhất')).toBeInTheDocument();
+      expect(screen.getByLabelText(/khung nhập tin nhắn/i)).toHaveValue('Câu đang soạn');
+
+      // The kept turns are still sent as history.
+      await user.clear(screen.getByLabelText(/khung nhập tin nhắn/i));
+      await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Câu hỏi thứ hai');
+      await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+      await screen.findByText('Trả lời thứ hai');
+      expect(mockGenerateAi).toHaveBeenLastCalledWith('org-1', expect.objectContaining({
+        messages: [
+          { role: 'user', content: 'Câu hỏi thứ nhất' },
+          { role: 'assistant', content: 'Trả lời thứ nhất' },
+          { role: 'user', content: 'Câu hỏi thứ hai' },
+        ],
+      }));
+    });
+
+    it('26. shows an answer that arrived while the user was on another page', async () => {
+      let resolveAnswer: (value: unknown) => void = () => {};
+      mockGenerateAi.mockReturnValueOnce(new Promise((resolve) => { resolveAnswer = resolve; }));
+      const { rerender } = render(session(true));
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Câu hỏi chậm');
+      await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+      expect(screen.getByText(/đang tra cứu dữ liệu/i)).toBeInTheDocument();
+
+      rerender(session(false));
+      await act(async () => { resolveAnswer(answer('Trả lời về khi đang ở trang khác')); });
+
+      rerender(session(true));
+      await screen.findByText('mock:mock-v1');
+      expect(screen.getByText('Trả lời về khi đang ở trang khác')).toBeInTheDocument();
+      expect(screen.queryByText(/đang tra cứu dữ liệu/i)).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/khung nhập tin nhắn/i)).not.toBeDisabled();
+    });
+
+    it('27. discards the kept conversation on logout, even when the same user signs in again', async () => {
+      mockGenerateAi.mockResolvedValueOnce(answer('Dữ liệu phiên cũ'));
+      const { rerender } = render(session(true));
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Câu hỏi phiên cũ');
+      await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+      await screen.findByText('Dữ liệu phiên cũ');
+      await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Nháp phiên cũ');
+
+      rerender(session(false));
+      signOut();
+      rerender(session(false));
+      signIn();
+      rerender(session(true));
+      await screen.findByText('mock:mock-v1');
+
+      expect(screen.queryByText('Dữ liệu phiên cũ')).not.toBeInTheDocument();
+      expect(screen.queryByText('Câu hỏi phiên cũ')).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/khung nhập tin nhắn/i)).toHaveValue('');
+    });
+
+    it('28. drops an answer that arrives after logout, even when the same user has signed in again', async () => {
+      let resolveAnswer: (value: unknown) => void = () => {};
+      mockGenerateAi.mockReturnValueOnce(new Promise((resolve) => { resolveAnswer = resolve; }));
+      const { rerender } = render(session(true));
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/khung nhập tin nhắn/i), 'Câu hỏi trước khi đăng xuất');
+      await user.click(screen.getByRole('button', { name: /gửi tin nhắn/i }));
+
+      signOut();
+      rerender(session(false));
+      signIn();
+      rerender(session(true));
+      await act(async () => { resolveAnswer(answer('Trả lời của phiên trước')); });
+
+      expect(screen.queryByText('Trả lời của phiên trước')).not.toBeInTheDocument();
+      expect(screen.queryByText('Câu hỏi trước khi đăng xuất')).not.toBeInTheDocument();
+      expect(screen.queryByText(/đang tra cứu dữ liệu/i)).not.toBeInTheDocument();
+    });
+  });
+});

@@ -12,6 +12,8 @@
     "backend"
   ],
   "overrides": {
+    "body-parser": "2.4.0",
+    "multer": "2.5.0",
     "@prisma/config": {
       "deepmerge-ts": "8.0.2"
     }

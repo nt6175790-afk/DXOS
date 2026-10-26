@@ -11,6 +11,14 @@ const categories: SearchCategory[] = ['tasks', 'employees', 'documents', 'depart
 const labels: Record<SearchCategory, string> = { tasks: 'Công việc', employees: 'Nhân sự', documents: 'Tài liệu', departments: 'Phòng ban', notifications: 'Thông báo' };
 const permissions: Record<SearchCategory, Permission | null> = { tasks: 'task:read', employees: 'employee:read', documents: 'file:read', departments: 'department:read', notifications: null };
 const route = (type: SearchCategory, id: string) => type === 'tasks' ? `/tasks/${id}` : ({ employees: '/people', documents: '/files', departments: '/departments', notifications: '/notifications' }[type]);
+const shortcuts = [
+  { to: '/tasks', label: 'Công việc', icon: CheckSquare, grants: ['task:read'] },
+  { to: '/calendar', label: 'Lịch làm việc', icon: Calendar, grants: ['task:read', 'calendar:read'] },
+  { to: '/people', label: 'Nhân sự', icon: Users, grants: ['employee:read'] },
+  { to: '/files', label: 'Kho tài liệu', icon: Folder, grants: ['file:read'] },
+  { to: '/notifications', label: 'Thông báo', icon: Bell, grants: [] },
+  { to: '/ai', label: 'Trợ lý AI', icon: Sparkles, grants: ['ai:use'] },
+] as const;
 
 export function GlobalSearch() {
   const { currentOrg } = useOrganization();
@@ -18,6 +26,8 @@ export function GlobalSearch() {
   return <ScopedSearch key={currentOrg.id} orgId={currentOrg.id} />;
 }
 function ScopedSearch({ orgId }: { orgId: string }) {
+  const { hasPermission, isLoading } = usePermission();
+  const permissionKey = shortcuts.map((shortcut) => shortcut.grants.some((grant) => hasPermission(grant))).join(':') + ':' + hasPermission('department:read');
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -31,7 +41,7 @@ function ScopedSearch({ orgId }: { orgId: string }) {
     <button ref={button} className="flex items-center gap-2 p-2 sm:px-3 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-sm" onClick={() => setOpen(true)} aria-label="Tìm kiếm toàn tổ chức (Ctrl+K)">
       <Search className="h-4 w-4" /><span className="hidden md:inline">Tìm kiếm...</span><kbd className="hidden xl:inline text-xs border rounded px-1">Ctrl K</kbd>
     </button>
-    {open && <SearchDialog orgId={orgId} onClose={close} />}
+    {open && !isLoading && <SearchDialog key={permissionKey} orgId={orgId} onClose={close} />}
   </>;
 }
 function SearchDialog({ orgId, onClose }: { orgId: string; onClose: () => void }) {
@@ -103,30 +113,10 @@ function SearchDialog({ orgId, onClose }: { orgId: string; onClose: () => void }
             <div className="pt-2 border-t border-slate-100">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Truy cập nhanh</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Link to="/tasks" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 text-sm text-slate-700 transition-colors">
-                  <div className="p-1 rounded bg-blue-50 text-blue-600"><CheckSquare className="h-4 w-4" /></div>
-                  <span className="font-medium">Công việc</span>
-                </Link>
-                <Link to="/calendar" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 text-sm text-slate-700 transition-colors">
-                  <div className="p-1 rounded bg-emerald-50 text-emerald-600"><Calendar className="h-4 w-4" /></div>
-                  <span className="font-medium">Lịch làm việc</span>
-                </Link>
-                <Link to="/people" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 text-sm text-slate-700 transition-colors">
-                  <div className="p-1 rounded bg-purple-50 text-purple-600"><Users className="h-4 w-4" /></div>
-                  <span className="font-medium">Nhân sự</span>
-                </Link>
-                <Link to="/files" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 text-sm text-slate-700 transition-colors">
-                  <div className="p-1 rounded bg-amber-50 text-amber-600"><Folder className="h-4 w-4" /></div>
-                  <span className="font-medium">Kho tài liệu</span>
-                </Link>
-                <Link to="/notifications" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 text-sm text-slate-700 transition-colors">
-                  <div className="p-1 rounded bg-indigo-50 text-indigo-600"><Bell className="h-4 w-4" /></div>
-                  <span className="font-medium">Thông báo</span>
-                </Link>
-                <Link to="/ai" onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 text-sm text-slate-700 transition-colors">
-                  <div className="p-1 rounded bg-violet-50 text-violet-600"><Sparkles className="h-4 w-4" /></div>
-                  <span className="font-medium">Trợ lý AI</span>
-                </Link>
+                {shortcuts.filter((shortcut) => shortcut.grants.length === 0 || shortcut.grants.some((grant) => hasPermission(grant))).map((shortcut) => <Link key={shortcut.to} to={shortcut.to} onClick={onClose} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-100 text-sm text-slate-700 transition-colors">
+                  <div className="p-1 rounded bg-brand-50 text-brand-600"><shortcut.icon className="h-4 w-4" /></div>
+                  <span className="font-medium">{shortcut.label}</span>
+                </Link>)}
               </div>
             </div>
           </div>
@@ -143,7 +133,7 @@ function SearchDialog({ orgId, onClose }: { orgId: string; onClose: () => void }
           </section>;
         })}
       </div>
-      <p className="text-xs text-slate-400 mt-4">↑ ↓ chọn kết quả · Enter mở · Esc đóng. Kết quả ngoài công việc mở trang danh sách tương ứng.</p>
+      <p className="text-xs text-slate-400 mt-4">↑ ↓ chọn · Enter mở · Esc đóng</p>
     </div>
   </dialog>;
 }

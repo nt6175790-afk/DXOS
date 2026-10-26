@@ -349,6 +349,65 @@ export class ComplianceService {
     });
   }
 
+  /**
+   * Read model for the AI assistant (document:read): active employees lacking a valid required document.
+   * Strictly read-only: without stored requirements it falls back to the defaults in memory instead of seeding them.
+   * `today` is the local calendar date as a UTC-midnight Date (how expiry_date is stored).
+   */
+  async missingDocumentsForAssistant(userId: string, orgId: string, query: { today: Date; departmentId?: string; limit: number }) {
+    return this.prisma.$transaction(async (tx) => {
+      if (!(await this.authorization.can(userId, PERMISSIONS.DOCUMENT_READ, orgId, tx))) throw new ForbiddenException();
+      const stored = await tx.documentRequirement.findMany({ where: { organizationId: orgId, isRequired: true },
+        select: { category: true, name: true, applicableDepartmentId: true } });
+      const configured = await tx.documentRequirement.count({ where: { organizationId: orgId } });
+      const requirements = configured ? stored : DEFAULT_REQUIREMENTS.map((r) => ({ ...r, applicableDepartmentId: null }));
+      const employees = await tx.employee.findMany({
+        where: { organizationId: orgId, status: 'ACTIVE', ...(query.departmentId ? { departmentId: query.departmentId } : {}) },
+        orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
+        select: { id: true, displayName: true, departmentId: true, department: { select: { name: true } } } });
+      const valid = await tx.employeeDocument.findMany({ where: { organizationId: orgId, deletedAt: null, status: DocumentStatus.ACTIVE,
+        employeeId: { in: employees.map((e) => e.id) }, category: { in: requirements.map((r) => r.category) },
+        OR: [{ expiryDate: null }, { expiryDate: { gte: query.today } }] }, select: { employeeId: true, category: true } });
+      const held = new Set(valid.map((d) => d.employeeId + '|' + d.category));
+      const missing: { employeeId: string; employeeName: string; departmentName: string | null; requirementName: string; category: DocumentCategory }[] = [];
+      for (const employee of employees) {
+        for (const requirement of requirements) {
+          if (requirement.applicableDepartmentId && requirement.applicableDepartmentId !== employee.departmentId) continue;
+          if (held.has(employee.id + '|' + requirement.category)) continue;
+          missing.push({ employeeId: employee.id, employeeName: employee.displayName, departmentName: employee.department?.name ?? null,
+            requirementName: requirement.name, category: requirement.category });
+        }
+      }
+      return { total: missing.length, employeesAffected: new Set(missing.map((m) => m.employeeId)).size, items: missing.slice(0, query.limit) };
+    });
+  }
+
+  /**
+   * Read model for the AI assistant (document:read): documents expiring within `withinDays` or already expired.
+   * Titles of SENSITIVE documents are only returned with document:sensitive:read; otherwise they are only counted.
+   */
+  async expiryAlertsForAssistant(userId: string, orgId: string, query: { kind: 'expiring' | 'expired'; today: Date; withinDays: number;
+    departmentId?: string; limit: number }) {
+    return this.prisma.$transaction(async (tx) => {
+      if (!(await this.authorization.can(userId, PERMISSIONS.DOCUMENT_READ, orgId, tx))) throw new ForbiddenException();
+      const canSensitive = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_SENSITIVE_READ, orgId, tx);
+      const expiry = query.kind === 'expired'
+        ? { lt: query.today }
+        : { gte: query.today, lte: new Date(query.today.getTime() + query.withinDays * 86_400_000) };
+      const where: Prisma.EmployeeDocumentWhereInput = { organizationId: orgId, deletedAt: null, status: { not: DocumentStatus.ARCHIVED },
+        expiryDate: expiry, employee: { organizationId: orgId, ...(query.departmentId ? { departmentId: query.departmentId } : {}) } };
+      const visible: Prisma.EmployeeDocumentWhereInput = canSensitive ? where : { ...where, sensitivity: 'NORMAL' };
+      const [total, hiddenSensitiveCount, documents] = await Promise.all([
+        tx.employeeDocument.count({ where: visible }),
+        canSensitive ? Promise.resolve(0) : tx.employeeDocument.count({ where: { ...where, sensitivity: 'SENSITIVE' } }),
+        tx.employeeDocument.findMany({ where: visible, orderBy: [{ expiryDate: 'asc' }, { id: 'asc' }], take: query.limit,
+          select: { id: true, title: true, category: true, expiryDate: true,
+            employee: { select: { displayName: true, department: { select: { name: true } } } } } }),
+      ]);
+      return { total, hiddenSensitiveCount, documents };
+    });
+  }
+
   async getMissingDocuments(userId: string, orgId: string) {
     return this.prisma.$transaction(async (tx) => {
       const canRead = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_READ, orgId, tx);
@@ -446,7 +505,9 @@ export class ComplianceService {
         orderBy: { expiryDate: 'asc' },
       });
 
-      return documents.map((d) => {
+      const sensitive = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_SENSITIVE_READ, orgId, tx);
+      const self = await tx.employee.findFirst({ where: { organizationId: orgId, userId, status: 'ACTIVE' }, select: { id: true } });
+      return documents.filter(d => d.sensitivity !== 'SENSITIVE' || sensitive || d.employeeId === self?.id).map((d) => {
         const isExpired = d.expiryDate ? new Date(d.expiryDate) < now : false;
         const diffMs = d.expiryDate ? new Date(d.expiryDate).getTime() - now.getTime() : 0;
         const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -470,6 +531,7 @@ export class ComplianceService {
 
   async getEmployeeCompliance(userId: string, orgId: string, employeeId: string) {
     return this.prisma.$transaction(async (tx) => {
+      if (!(await this.authorization.isActiveMember(userId, orgId, tx))) throw new ForbiddenException();
       const callerEmp = await tx.employee.findFirst({
         where: { organizationId: orgId, userId, status: 'ACTIVE' },
       });
@@ -533,6 +595,8 @@ export class ComplianceService {
           ? Math.round((fulfilledCategories.length / requirements.length) * 1000) / 10
           : 100;
 
+      const sensitive = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_SENSITIVE_READ, orgId, tx);
+      const visibleDocuments = documents.filter(d => d.sensitivity !== 'SENSITIVE' || isSelf || sensitive);
       return {
         employeeId,
         totalRequired: requirements.length,
@@ -540,7 +604,7 @@ export class ComplianceService {
         complianceRate,
         isCompliant: missingRequirements.length === 0,
         missingRequirements,
-        documents,
+        documents: visibleDocuments,
       };
     });
   }

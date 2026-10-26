@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { PermissionProvider } from '@/contexts/PermissionContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { AiConversationProvider } from '@/features/ai/AiConversationProvider';
 import { router } from '@/router';
 
 export default function App() {
@@ -13,7 +14,9 @@ export default function App() {
         <AuthProvider>
           <OrganizationProvider>
             <PermissionProvider>
-              <RouterProvider router={router} />
+              <AiConversationProvider>
+                <RouterProvider router={router} />
+              </AiConversationProvider>
             </PermissionProvider>
           </OrganizationProvider>
         </AuthProvider>

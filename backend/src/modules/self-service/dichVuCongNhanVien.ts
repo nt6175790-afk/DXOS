@@ -44,6 +44,21 @@ export class SelfServiceService {
     private readonly authz: AuthorizationService,
   ) {}
 
+  /**
+   * The caller's own account name and employee profile for the AI assistant (read-only, no contact data). Scoped to
+   * the route organization and the authenticated user; `employee` is null without an employee record there.
+   */
+  async profileForAssistant(organizationId: string, userId: string) {
+    const [account, employee] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } }),
+      this.prisma.employee.findUnique({
+        where: { organizationId_userId: { organizationId, userId } },
+        select: { employeeCode: true, displayName: true, jobTitle: true, department: { select: { name: true, parent: { select: { name: true } } } } },
+      }),
+    ]);
+    return { accountName: account?.displayName ?? null, employee };
+  }
+
   async getMyScheduleOverview(organizationId: string, userId: string, query: MyScheduleQueryDto) {
     const isMember = await this.authz.isActiveMember(userId, organizationId);
     if (!isMember) {

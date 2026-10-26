@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bot,
@@ -21,20 +21,56 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrgBootstrapGuard } from '@/hooks/useOrgBootstrapGuard';
 import { usePermission } from '@/hooks/usePermission';
-import { generateAi, getAiConfig, getAiInsights } from '@/api/ai';
-import { isApiError } from '@/api/client';
+import { getAiConfig, getAiInsights } from '@/api/ai';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ForbiddenState } from '@/components/ui/ForbiddenState';
-import type { AiMessage, AiInsightsResponse } from '@/api/types';
+import type { AiInsightsResponse } from '@/api/types';
+import type { Permission } from '@/api/types';
+import { useAiConversation } from './ai-conversation';
+import type { ChatMessage } from './ai-conversation';
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-  status?: 'sent' | 'error';
-  requestId?: string;
+const MAX_VISIBLE_CITATIONS = 8;
+
+/** Source chips, numeric-check warning and completeness note under an agent answer (spec mục 8). */
+function AnswerFooter({ msg }: { msg: ChatMessage }) {
+  const citations = (msg.citations ?? []).filter((c) => c.href.startsWith('/') && !c.href.startsWith('//'));
+  const unique = citations.filter((c, i) => citations.findIndex((o) => o.href === c.href && o.label === c.label) === i);
+  const visible = unique.slice(0, MAX_VISIBLE_CITATIONS);
+  const hasNumericCheck = msg.numericCheck?.status === 'PASS' || msg.numericCheck?.status === 'WARN';
+  if (!visible.length && !hasNumericCheck && msg.finishReason !== 'tool_limit') return null;
+  return (
+    <div className="mt-2 space-y-1.5">
+      {hasNumericCheck && (
+        <p className="text-[11px] text-slate-500" data-testid="ai-numeric-scope">
+          Chỉ đối chiếu sự xuất hiện của các con số; hãy kiểm tra ý nghĩa tại nguồn.
+        </p>
+      )}
+      {msg.numericCheck?.status === 'WARN' && (
+        <div className="flex items-start gap-1.5 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1" data-testid="ai-numeric-warning">
+          <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" aria-hidden="true" />
+          <span>Cảnh báo: có số liệu chưa đối chiếu được với dữ liệu nguồn, hãy kiểm tra lại qua các liên kết bên dưới.</span>
+        </div>
+      )}
+      {msg.finishReason === 'tool_limit' && (
+        <div className="text-[11px] text-slate-500" data-testid="ai-tool-limit-note">
+          Lưu ý: câu trả lời có thể chưa đầy đủ vì câu hỏi cần tra cứu nhiều dữ liệu; hãy hỏi cụ thể hơn.
+        </div>
+      )}
+      {visible.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5" data-testid="ai-citations">
+          <span className="text-[11px] font-medium text-slate-500">Nguồn:</span>
+          {visible.map((c) => (
+            <Link key={c.href + '|' + c.label} to={c.href} title={c.label}
+              className="max-w-[14rem] truncate px-2 py-0.5 rounded-md border border-slate-200 bg-white text-[11px] text-brand-700 hover:bg-brand-50 hover:border-brand-200">
+              {c.label}
+            </Link>
+          ))}
+          {unique.length > visible.length && <span className="text-[11px] text-slate-500">+{unique.length - visible.length}</span>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function formatProviderLabel(provider: string, model: string): string {
@@ -116,17 +152,21 @@ export function AiAssistantPage() {
   const canUseAi = hasPermission('ai:use');
 
   let isAuthenticated = true;
+  let userId: string | undefined;
   try {
     const auth = useAuth();
     isAuthenticated = auth?.isAuthenticated ?? true;
+    userId = auth?.user?.id;
   } catch {
     isAuthenticated = true;
   }
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Kept by AiConversationProvider for the whole signed-in session, so leaving the page does not lose it.
+  const conversation = useAiConversation(userId, orgId, isAuthenticated);
+  const { messages, isLoading, error } = conversation;
+  const input = conversation.draft;
+  const setInput = conversation.setDraft;
+
   const [activeProviderInfo, setActiveProviderInfo] = useState<{
     provider: string;
     model: string;
@@ -136,7 +176,6 @@ export function AiAssistantPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const currentOrgIdRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom whenever messages or loading state changes
   useEffect(() => {
@@ -149,9 +188,11 @@ export function AiAssistantPage() {
     }
   }, [messages, isLoading, error]);
 
-  // Load AI configuration on mount or when organization switches
+  // Load AI configuration and insights on mount or when organization switches; drop them on logout.
   useEffect(() => {
-    if (!orgId || !canUseAi) return;
+    setActiveProviderInfo(null);
+    setInsights(null);
+    if (!isAuthenticated || !orgId || !canUseAi) return;
     let isMounted = true;
     if (typeof getAiConfig === 'function') {
       getAiConfig(orgId)
@@ -164,15 +205,6 @@ export function AiAssistantPage() {
           // Fallback silently if unconfigured or error
         });
     }
-    return () => {
-      isMounted = false;
-    };
-  }, [orgId, canUseAi]);
-
-  // Load AI Insights summary
-  useEffect(() => {
-    if (!orgId || !canUseAi) return;
-    let isMounted = true;
     if (typeof getAiInsights === 'function') {
       getAiInsights(orgId)
         .then((data) => {
@@ -187,151 +219,22 @@ export function AiAssistantPage() {
     return () => {
       isMounted = false;
     };
-  }, [orgId, canUseAi]);
+  }, [isAuthenticated, orgId, canUseAi]);
 
-  // Tenant isolation & logout guard: reset conversation when organization switches or user logs out
+  // Focus the input on load and again when an answer arrives
   useEffect(() => {
-    if (!isAuthenticated || !orgId) {
-      setMessages([]);
-      setError(null);
-      setActiveProviderInfo(null);
-      setInsights(null);
-      currentOrgIdRef.current = null;
-      return;
-    }
-
-    if (currentOrgIdRef.current !== orgId) {
-      currentOrgIdRef.current = orgId;
-      setMessages([]);
-      setError(null);
-      setActiveProviderInfo(null);
-      setInsights(null);
-      setIsLoading(false);
-    }
-  }, [isAuthenticated, orgId]);
-
-  // Focus textarea on load
-  useEffect(() => {
-    if (canUseAi && !isPermissionLoading) {
+    if (canUseAi && !isPermissionLoading && !isLoading) {
       textareaRef.current?.focus();
     }
-  }, [canUseAi, isPermissionLoading]);
+  }, [canUseAi, isPermissionLoading, isLoading]);
 
-  const sendConversationTurn = useCallback(
-    async (turnMessages: ChatMessage[], targetOrgId: string) => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Send previous turns plus the current turn, bounded by the 16 messages contract limit
-        const apiMessages: AiMessage[] = turnMessages
-          .filter((m) => m.status !== 'error')
-          .slice(-16)
-          .map((m) => ({
-            role: m.role,
-            content: m.content,
-          }));
-
-        const response = await generateAi(targetOrgId, {
-          messages: apiMessages,
-          maxOutputTokens: 1024,
-        });
-
-        // Verify that targetOrgId matches the active organization (race condition guard)
-        if (currentOrgIdRef.current !== targetOrgId) {
-          return;
-        }
-
-        const assistantMsg: ChatMessage = {
-          id: response.id || `ast-${Date.now()}`,
-          role: 'assistant',
-          content: response.text,
-          timestamp: Date.now(),
-          requestId: response.requestId,
-        };
-
-        setMessages((prev) => [...prev, assistantMsg]);
-        if (response.provider && response.model) {
-          setActiveProviderInfo({ provider: response.provider, model: response.model });
-        }
-      } catch (err: unknown) {
-        if (currentOrgIdRef.current !== targetOrgId) return;
-
-        let errorMsg = 'Không nhận được phản hồi từ hệ thống AI. Vui lòng thử lại.';
-
-        if (isApiError(err)) {
-          const code = err.error.code;
-
-          if (code === 'AI_PROVIDER_NOT_CONFIGURED') {
-            errorMsg = 'AI Provider chưa được cấu hình. Vui lòng thiết lập API key trên máy chủ.';
-          } else if (code === 'AI_PROVIDER_UNAVAILABLE') {
-            errorMsg = 'Dịch vụ AI hiện không khả dụng hoặc bị quá thời gian chờ. Vui lòng thử lại.';
-          } else if (code === 'AI_LIMIT_EXCEEDED') {
-            errorMsg = 'Tài khoản OpenAI đã hết số dư (credit balance exhausted) hoặc vượt quá hạn mức yêu cầu. Vui lòng nạp thêm credit tại platform.openai.com/settings/organization/billing để tiếp tục sử dụng model gpt-4o-mini.';
-          } else if (code === 'FORBIDDEN') {
-            errorMsg = 'Bạn không có quyền sử dụng Trợ lý AI trong tổ chức này (yêu cầu quyền ai:use).';
-          } else if (code === 'UNAUTHORIZED') {
-            errorMsg = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
-          } else if (code === 'VALIDATION_FAILED' || code === 'AI_INVALID_REQUEST') {
-            errorMsg = 'Nội dung tin nhắn không hợp lệ hoặc vượt quá giới hạn.';
-          } else if (err.error.message) {
-            errorMsg = err.error.message;
-          }
-        }
-
-        setError(errorMsg);
-
-        // Mark the last user message as error status so user can retry
-        setMessages((prev) => {
-          if (prev.length === 0) return prev;
-          const updated = [...prev];
-          const lastIdx = updated.length - 1;
-          if (updated[lastIdx].role === 'user') {
-            updated[lastIdx] = { ...updated[lastIdx], status: 'error' };
-          }
-          return updated;
-        });
-      } finally {
-        if (currentOrgIdRef.current === targetOrgId) {
-          setIsLoading(false);
-          // Auto refocus input on finish
-          setTimeout(() => textareaRef.current?.focus(), 50);
-        }
-      }
-    },
-    []
-  );
-
+  // The store already ignores sends without an organization or while a request is running.
   const handleSend = () => {
-    const trimmed = input.trim();
-    if (!trimmed || !orgId || isLoading || !canUseAi) return;
-
-    const userMsg: ChatMessage = {
-      id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      role: 'user',
-      content: trimmed,
-      timestamp: Date.now(),
-      status: 'sent',
-    };
-
-    const nextMessages = [...messages, userMsg];
-    setMessages(nextMessages);
-    setInput('');
-    sendConversationTurn(nextMessages, orgId);
+    if (canUseAi) conversation.send(input);
   };
 
   const handleRetry = () => {
-    if (!orgId || isLoading || !canUseAi || messages.length === 0) return;
-
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg.role !== 'user') return;
-
-    const cleanedMessages = messages.map((m, idx) =>
-      idx === messages.length - 1 ? { ...m, status: 'sent' as const } : m
-    );
-
-    setMessages(cleanedMessages);
-    sendConversationTurn(cleanedMessages, orgId);
+    if (canUseAi) conversation.retry();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -343,8 +246,7 @@ export function AiAssistantPage() {
 
   const handleClearConversation = () => {
     if (isLoading) return;
-    setMessages([]);
-    setError(null);
+    conversation.clear();
     textareaRef.current?.focus();
   };
 
@@ -357,18 +259,20 @@ export function AiAssistantPage() {
 
   const hasFailedTurn = error !== null && messages.length > 0 && messages[messages.length - 1].role === 'user';
 
-  const analyticsPrompts = [
-    { label: 'Những workflow nào đang cần xử lý?', icon: '⚡' },
-    { label: 'Những hợp đồng nào sắp hết hạn trong 30 ngày?', icon: '📋' },
-    { label: 'Đề xuất các automation HR cần thiết', icon: '🤖' },
-    { label: 'Có automation nào bị lỗi?', icon: '🛡️' },
-    { label: 'Phân tích tình hình nhân sự hiện tại', icon: '👥' },
-    { label: 'Phân tích chấm công tháng này', icon: '⏰' },
-    { label: 'Phân tích hiệu suất nhân sự', icon: '🎯' },
-    { label: 'Phân tích tình trạng hồ sơ & tuân thủ', icon: '📄' },
-    { label: 'Tổng quan HR tháng này', icon: '📈' },
-    { label: 'So sánh tháng này với tháng trước', icon: '🔄' },
+  // Suggestions map to the agent's tools and only show when the user may use them (spec mục 8).
+  const assistantPrompts: { label: string; icon: string; needs: Permission[] }[] = [
+    { label: 'Có việc nào đang quá hạn không?', icon: '⏰', needs: ['task:read'] },
+    { label: 'Hôm nay tôi làm ca mấy giờ?', icon: '🗓️', needs: [] },
+    { label: 'Có đơn nào đang chờ duyệt không?', icon: '✅', needs: ['approval:read'] },
+    { label: 'Hôm nay ai đi trễ hoặc chưa chấm công?', icon: '🕘', needs: ['attendance:read', 'attendance:manage'] },
+    { label: 'Tuần này ai nghỉ phép?', icon: '🏖️', needs: ['leave:read'] },
+    { label: 'Giấy tờ nào sắp hết hạn trong 30 ngày tới?', icon: '📋', needs: ['document:read'] },
+    { label: 'Tuần này có cuộc họp nào?', icon: '📅', needs: ['calendar:read'] },
+    { label: 'Tình hình công ty hôm nay thế nào?', icon: '📈', needs: [] },
+    { label: 'Tháng này đi trễ bao nhiêu lượt so với tháng trước?', icon: '🔄', needs: ['report:read', 'attendance:read', 'attendance:manage'] },
   ];
+  const analyticsPrompts = assistantPrompts.filter((p) => p.needs.every((permission) => hasPermission(permission)));
+
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
@@ -410,6 +314,7 @@ export function AiAssistantPage() {
       <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-0">
         <div
           className="flex-1 overflow-y-auto p-4 space-y-4"
+          aria-live="polite"
           role="log"
           aria-label="Lịch sử trò chuyện với AI"
         >
@@ -575,6 +480,7 @@ export function AiAssistantPage() {
                 {msg.role === 'assistant' ? (
                   <>
                     <AssistantMessageContent content={msg.content} />
+                    <AnswerFooter msg={msg} />
                     {(msg.content.toLowerCase().includes('workflow') ||
                       msg.content.toLowerCase().includes('quy trình') ||
                       msg.content.toLowerCase().includes('gia hạn')) && (
@@ -612,7 +518,7 @@ export function AiAssistantPage() {
             <div className="flex justify-start">
               <div className="max-w-[80%] rounded-2xl rounded-bl-none px-4 py-3 bg-slate-100 text-slate-800 border border-slate-200/60 flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-brand-600" />
-                <span className="text-xs text-slate-500">Trợ lý AI đang xử lý câu trả lời...</span>
+                <span className="text-xs text-slate-500">Trợ lý AI đang tra cứu dữ liệu...</span>
               </div>
             </div>
           )}

@@ -11,9 +11,18 @@ try {
   if (!['localhost', '127.0.0.1'].includes(database.hostname)) throw new Error();
   database.hostname = 'host.docker.internal';
   if (!process.env.JWT_ACCESS_SECRET || process.env.JWT_ACCESS_SECRET.length < 32) throw new Error();
+  // AI agent settings (README "Trợ lý AI"); a model server on the host is reached through host.docker.internal.
+  const ai = {};
+  if (process.env.AI_BASE_URL) {
+    const base = new URL(process.env.AI_BASE_URL);
+    if (['localhost', '127.0.0.1'].includes(base.hostname)) base.hostname = 'host.docker.internal';
+    ai.AI_BASE_URL = base.href.replace(/\/+$/, '');
+  }
+  // Unset keys keep the backend defaults for the chosen provider (e.g. AI_MODEL gpt-oss:120b for ollama, mock-v1 for mock).
+  for (const key of ['AI_MODEL', 'AI_REASONING_EFFORT', 'AI_AGENT_MAX_STEPS', 'AI_AGENT_TOTAL_TIMEOUT_MS', 'AI_TIMEOUT_MS']) if (process.env[key]) ai[key] = process.env[key];
   const env = { NODE_ENV: 'development', DATABASE_URL: database.href, JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
     API_PREFIX: 'api/v1', LOG_LEVEL: 'info', SWAGGER_ENABLED: 'true', CORS_ORIGINS: 'http://localhost:8088',
-    AI_PROVIDER: process.env.AI_PROVIDER ?? 'mock', AI_MODEL: process.env.AI_MODEL ?? 'mock-v1',
+    AI_PROVIDER: process.env.AI_PROVIDER ?? 'mock', ...ai,
     ...(process.env.AI_API_KEY ? { AI_API_KEY: process.env.AI_API_KEY } : {}),
     SSO_ENABLED: 'true', SSO_ISSUER: 'http://localhost:8180/realms/dxos', SSO_CLIENT_ID: 'dxos-web',
     SSO_REDIRECT_URI: 'http://localhost:8088/auth/sso/callback', SSO_BACKCHANNEL_ORIGIN: 'http://keycloak:8080',

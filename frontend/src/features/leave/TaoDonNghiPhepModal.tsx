@@ -8,7 +8,7 @@ interface CreateLeaveModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  currentEmployee: Employee | null;
+  currentEmployee: Pick<Employee, 'id' | 'employeeCode' | 'displayName'> | null;
   orgId: string;
 }
 

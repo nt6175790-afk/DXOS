@@ -15,6 +15,8 @@ node backend/scripts/publish-openbao-local-secrets.js
 docker compose --env-file .security.local.env -f backend/deploy/compose.security.yml --profile app up -d --build
 ```
 
+Trợ lý AI với model thật: đặt `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY` trong `backend/.env` trước `init-container-env.js`; với stack đã dựng, thêm cấu hình vào `.security.backend.env` và nạp hoặc đổi key bằng `node backend/scripts/set-openbao-ai-key.js` (check-and-set, không in key), rồi tạo lại container backend. Chi tiết: mục Trợ lý AI trong README.
+
 Sau restart OpenBao bị seal: chạy init-openbao-local trước agent/backend. Không initialize lại volume có dữ liệu. File store đã chuyển sang Raft: xem openbao-raft-migration.md. Không mount file store vào 2.7.1. backup-security-state.js xác định mount đang dùng, dừng dịch vụ để backup nhất quán và giữ chúng dừng; sau đó restart/unseal theo trình tự trên. Không đưa backup/seal shares/TLS private key vào Git.
 
 ## SSO

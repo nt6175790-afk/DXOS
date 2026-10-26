@@ -1,4 +1,6 @@
+import { AI_PROVIDERS } from '../../config/environment';
 import { AI_LIMITS } from './ai-policy';
+import { AI_CITATION_TYPES, MAX_CITATIONS } from './tools/tool.types';
 const error = { $ref: '#/components/responses/ErrorResponse' };
 export const aiPaths = {
   '/organizations/{organizationId}/ai/generate': { post: {
@@ -26,12 +28,22 @@ export const aiSchemas = {
   AiGenerateResponse: { type: 'object', additionalProperties: false,
     required: ['id', 'organizationId', 'requestId', 'provider', 'model', 'text', 'finishReason', 'usage'], properties: {
       id: { type: 'string', format: 'uuid' }, organizationId: { type: 'string', format: 'uuid' }, requestId: { type: 'string', maxLength: 128 },
-      provider: { type: 'string', enum: ['mock', 'openai'] }, model: { type: 'string', maxLength: 100 },
-      text: { type: 'string', minLength: 1, maxLength: AI_LIMITS.outputChars }, finishReason: { type: 'string', enum: ['stop', 'length'] },
+      provider: { type: 'string', enum: AI_PROVIDERS.filter((p) => p !== 'disabled') }, model: { type: 'string', maxLength: 100 },
+      text: { type: 'string', minLength: 1, maxLength: AI_LIMITS.outputChars }, finishReason: { type: 'string', enum: ['stop', 'length', 'tool_limit'] },
       usage: { type: 'object', additionalProperties: false, required: ['inputTokens', 'outputTokens', 'totalTokens'], properties: {
         inputTokens: { type: 'integer', minimum: 0, maximum: AI_LIMITS.usageCount },
-        outputTokens: { type: 'integer', minimum: 0, maximum: AI_LIMITS.outputTokens },
-        totalTokens: { type: 'integer', minimum: 0, maximum: AI_LIMITS.usageCount + AI_LIMITS.outputTokens },
+        // The agent sums usage over several model calls, so output can exceed one call's cap.
+        outputTokens: { type: 'integer', minimum: 0, maximum: AI_LIMITS.usageCount },
+        totalTokens: { type: 'integer', minimum: 0, maximum: 2 * AI_LIMITS.usageCount },
+      } },
+      citations: { type: 'array', maxItems: MAX_CITATIONS, description: 'Records the answer is based on; only from tool results of this request. Empty on the legacy path.',
+        items: { type: 'object', additionalProperties: false, required: ['type', 'id', 'label', 'href'], properties: {
+          type: { type: 'string', enum: [...AI_CITATION_TYPES] },
+          id: { type: 'string', format: 'uuid', nullable: true }, label: { type: 'string', minLength: 1, maxLength: 120 },
+          href: { type: 'string', pattern: '^/', description: 'Internal frontend route only.' },
+        } } },
+      numericCheck: { type: 'object', additionalProperties: false, required: ['status', 'unmatchedCount'], properties: {
+        status: { type: 'string', enum: ['PASS', 'WARN', 'NOT_APPLICABLE'] }, unmatchedCount: { type: 'integer', minimum: 0 },
       } },
     } },
 };

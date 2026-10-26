@@ -12,6 +12,7 @@ import {
   Clock,
   XCircle,
 } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { payrollApi } from '@/api/payroll';
 import type { PayrollPeriod, PayrollRecord } from '@/api/types';
@@ -31,6 +32,9 @@ export function PayrollPeriodDetailModal({
   onRefresh,
 }: PayrollPeriodDetailModalProps) {
   const { currentOrg } = useOrganization();
+  const { hasPermission } = usePermission();
+  const canCalculate = hasPermission('payroll:calculate');
+  const canFinalize = hasPermission('payroll:finalize');
   const orgId = currentOrg?.id || '';
 
   const [currentPeriod, setCurrentPeriod] = useState<PayrollPeriod | null>(period);
@@ -210,7 +214,7 @@ export function PayrollPeriodDetailModal({
             </div>
             <div className="flex flex-col justify-center gap-2">
               {/* Contextual Actions */}
-              {currentPeriod.status !== 'FINALIZED' && currentPeriod.status !== 'PENDING_APPROVAL' && (
+              {canCalculate && (currentPeriod.status === 'DRAFT' || currentPeriod.status === 'CALCULATED') && (
                 <button
                   onClick={handleCalculate}
                   disabled={actionLoading}
@@ -221,7 +225,7 @@ export function PayrollPeriodDetailModal({
                 </button>
               )}
 
-              {currentPeriod.status === 'CALCULATED' && (
+              {canCalculate && currentPeriod.status === 'CALCULATED' && (
                 <button
                   onClick={handleRequestApproval}
                   disabled={actionLoading}
@@ -232,7 +236,7 @@ export function PayrollPeriodDetailModal({
                 </button>
               )}
 
-              {currentPeriod.status === 'APPROVED' && (
+              {canFinalize && currentPeriod.status === 'APPROVED' && (
                 <button
                   onClick={handleFinalize}
                   disabled={actionLoading}
