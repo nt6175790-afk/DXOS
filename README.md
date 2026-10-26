@@ -14,7 +14,7 @@ Khi phân phối lại, cần giữ các thông báo bản quyền/giấy phép 
 
 ## Bản phát hành và demo cho người chấm
 
-[GitHub Releases](https://github.com/nt6175790-afk/DXOS/releases) lưu phiên bản gắn tag, source zip, commit manifest và SHA-256. Dùng tag **v0.2.0** để lấy đúng mã nguồn release; main có thể thay đổi sau này. Xem [quy trình PR/release](docs/architecture/release-process.md).
+[GitHub Releases](https://github.com/nt6175790-afk/DXOS/releases) lưu phiên bản gắn tag, source zip, commit manifest và SHA-256. Chọn tag được công bố trên trang Releases để lấy đúng phiên bản; main có thể thay đổi sau này. Bản chuẩn bị v0.3.0 được mô tả ở [release notes](docs/release/v0.3.0.md); chỉ gọi là đã phát hành khi có tag và GitHub Release tương ứng. Xem [quy trình PR/release](docs/architecture/release-process.md).
 
 **Cập nhật bảo mật 21/10/2026:** v0.1.0 chứa follow-redirects 1.16.0 trong frontend lockfile, vừa được scanner báo hai HIGH. Bản vá 1.16.1 được xử lý trong [PR #15](https://github.com/nt6175790-afk/DXOS/pull/15); khi dựng bản mới, chọn revision đã vá và đã qua CI. Tag/asset v0.1.0 giữ nguyên để truy xuất; không coi bản cũ là đã có bản vá. Xem [chi tiết và phạm vi ảnh hưởng](docs/security/follow-redirects-2026-10-21.md).
 
