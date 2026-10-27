@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 /** @type {import('tailwindcss').Config} */
 export default {
+  // ThemeProvider owns the active theme; do not mix it with OS media styles.
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
