@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
 export const AUDIT_EVENTS = {
+  AI_KNOWLEDGE_INDEXED: 'ai.knowledge.indexed', AI_KNOWLEDGE_REMOVED: 'ai.knowledge.removed',
+  WORKFLOW_STEP_FAILED: 'workflow.step_failed', WORKFLOW_RETRIED: 'workflow.retried',
+  USER_CREATED: 'user.created', USER_UPDATED: 'user.updated', MEMBERSHIP_REMOVED: 'membership.removed',
+  ROLE_UPDATED: 'rbac.role.updated', ROLE_DELETED: 'rbac.role.deleted',
   REPORT_EXPORTED: 'report.exported',
   CALENDAR_EVENT_CREATED: 'calendar.event.created', CALENDAR_EVENT_UPDATED: 'calendar.event.updated',
   TASK_COMMENT_ADDED: 'task.comment.added', TASK_ATTACHMENT_LINKED: 'task.attachment.linked', TASK_ATTACHMENT_UNLINKED: 'task.attachment.unlinked',
@@ -80,6 +84,13 @@ export const AUDIT_EVENTS = {
 export type AuditEventName = (typeof AUDIT_EVENTS)[keyof typeof AUDIT_EVENTS];
 export const AUDIT_EVENT_NAMES = Object.values(AUDIT_EVENTS);
 export const AUDIT_DESCRIPTORS: Record<AuditEventName, { outcome: 'SUCCESS' | 'FAILURE' | 'DENIED'; resourceType: string; tenant: boolean }> = {
+  [AUDIT_EVENTS.WORKFLOW_STEP_FAILED]: { outcome: 'FAILURE', resourceType: 'workflow', tenant: true },
+  [AUDIT_EVENTS.WORKFLOW_RETRIED]: { outcome: 'SUCCESS', resourceType: 'workflow', tenant: true },
+  [AUDIT_EVENTS.USER_CREATED]: { outcome: 'SUCCESS', resourceType: 'user', tenant: true },
+  [AUDIT_EVENTS.USER_UPDATED]: { outcome: 'SUCCESS', resourceType: 'user', tenant: true },
+  [AUDIT_EVENTS.MEMBERSHIP_REMOVED]: { outcome: 'SUCCESS', resourceType: 'membership', tenant: true },
+  [AUDIT_EVENTS.ROLE_UPDATED]: { outcome: 'SUCCESS', resourceType: 'role', tenant: true },
+  [AUDIT_EVENTS.ROLE_DELETED]: { outcome: 'SUCCESS', resourceType: 'role', tenant: true },
   [AUDIT_EVENTS.REPORT_EXPORTED]: { outcome: 'SUCCESS', resourceType: 'report', tenant: true },
   [AUDIT_EVENTS.CALENDAR_EVENT_CREATED]: { outcome: 'SUCCESS', resourceType: 'calendar_event', tenant: true },
   [AUDIT_EVENTS.CALENDAR_EVENT_UPDATED]: { outcome: 'SUCCESS', resourceType: 'calendar_event', tenant: true },
@@ -98,6 +109,8 @@ export const AUDIT_DESCRIPTORS: Record<AuditEventName, { outcome: 'SUCCESS' | 'F
   [AUDIT_EVENTS.EMPLOYEE_UPDATED]: { outcome: 'SUCCESS', resourceType: 'employee', tenant: true },
   [AUDIT_EVENTS.DEPARTMENT_CREATED]: { outcome: 'SUCCESS', resourceType: 'department', tenant: true },
   [AUDIT_EVENTS.DEPARTMENT_UPDATED]: { outcome: 'SUCCESS', resourceType: 'department', tenant: true },
+  [AUDIT_EVENTS.AI_KNOWLEDGE_INDEXED]: { outcome: 'SUCCESS', resourceType: 'file', tenant: true },
+  [AUDIT_EVENTS.AI_KNOWLEDGE_REMOVED]: { outcome: 'SUCCESS', resourceType: 'file', tenant: true },
   [AUDIT_EVENTS.AI_STARTED]: { outcome: 'SUCCESS', resourceType: 'ai', tenant: true },
   [AUDIT_EVENTS.AI_SUCCEEDED]: { outcome: 'SUCCESS', resourceType: 'ai', tenant: true },
   [AUDIT_EVENTS.AI_FAILED]: { outcome: 'FAILURE', resourceType: 'ai', tenant: true },

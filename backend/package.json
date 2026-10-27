@@ -1,6 +1,6 @@
 {
   "name": "@dx-os/backend",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "DX-OS backend API",
   "main": "dist/main.js",
@@ -36,6 +36,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "openid-client": "6.8.8",
+    "pdfjs-dist": "6.4.299",
     "redis": "5.12.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"

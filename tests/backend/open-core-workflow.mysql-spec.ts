@@ -12,6 +12,7 @@ import { getAppConfiguration } from '../../backend/src/config/environment';
 import { StructuredLogger } from '../../backend/src/common/logging/structured-logger';
 import { PrismaService } from '../../backend/src/database/prisma.service';
 import { PERMISSIONS } from '../../backend/src/modules/rbac/permission-catalog';
+import { AuditService } from '../../backend/src/modules/audit/audit.service';
 
 const url = process.env.RBAC_TEST_DATABASE_URL;
 const integration = url ? describe : describe.skip;
@@ -46,6 +47,9 @@ integration('Open-Core: authenticated university unit workflow, persistence and 
     await db.workflowStepExecution.deleteMany({ where: tenants });
     await db.workflowInstance.deleteMany({ where: tenants });
     await db.workflowDefinition.deleteMany({ where: tenants });
+    await db.task.deleteMany({ where: tenants });
+    await db.employeeDocument.deleteMany({ where: tenants });
+    await db.employee.deleteMany({ where: tenants });
     await db.notification.deleteMany({ where: tenants });
     await db.auditEvent.deleteMany({ where: { OR: [tenants, { actorUserId: actor }] } });
     const roles = await db.role.findMany({ where: tenants, select: { id: true } });
@@ -126,5 +130,69 @@ integration('Open-Core: authenticated university unit workflow, persistence and 
     expect(replies.filter(r => r.status === 201)).toHaveLength(1);
     expect(replies.every(r => [201, 400, 409].includes(r.status))).toBe(true);
     expect((await db.workflowInstance.findUniqueOrThrow({ where: { id: started.body.id } })).status).toBe('COMPLETED');
+  });
+  async function businessFixture(permission?: string) {
+    const employee = await db.employee.create({ data: { organizationId: org, userId: actor, employeeCode: 'WF-001', displayName: 'Workflow operator' } });
+    if (permission) await grant(permission);
+    return employee;
+  }
+  async function grant(key: string) {
+    const role = await db.role.findFirstOrThrow({ where: { organizationId: org } });
+    const permission = await db.permission.upsert({ where: { key }, update: {}, create: { key, name: key } });
+    await db.rolePermission.upsert({ where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } }, update: {}, create: { roleId: role.id, permissionId: permission.id } });
+  }
+  async function taskWorkflow() {
+    await db.workflowDefinition.update({ where: { id: definition }, data: { steps: JSON.stringify([
+      { name: 'Confirm task', type: 'HUMAN_CONFIRMATION' }, { name: 'Create task', type: 'TASK', payload: { action: 'CREATE_TASK' } },
+    ]) } });
+    return start().expect(201);
+  }
+  it('creates a real task after human confirmation, persists its reference and never duplicates it', async () => {
+    await businessFixture(PERMISSIONS.TASK_CREATE);
+    const waiting = await taskWorkflow();
+    expect(await db.task.count({ where: { organizationId: org } })).toBe(0);
+    const done = await confirm(waiting.body.id, waiting.body.stepExecutions[0].id).expect(201);
+    expect(done.body.status).toBe('COMPLETED');
+    const outcome = JSON.parse(done.body.stepExecutions[1].resultPayload);
+    expect(outcome.action).toBe('CREATE_TASK');
+    expect(await db.task.count({ where: { organizationId: org, id: outcome.taskId } })).toBe(1);
+    await http().post(route(`/${waiting.body.id}/retry`)).set(auth()).send({}).expect(409);
+    expect(await db.task.count({ where: { organizationId: org } })).toBe(1);
+  });
+  it('fails without domain permission, then safely retries after an explicit grant', async () => {
+    await businessFixture(); const waiting = await taskWorkflow();
+    const failed = await confirm(waiting.body.id, waiting.body.stepExecutions[0].id).expect(201);
+    expect(failed.body.status).toBe('FAILED');
+    expect(await db.task.count({ where: { organizationId: org } })).toBe(0);
+    await grant(PERMISSIONS.TASK_CREATE);
+    const retried = await http().post(route(`/${waiting.body.id}/retry`)).set(auth()).send({}).expect(201);
+    expect(retried.body.status).toBe('COMPLETED');
+    expect(await db.task.count({ where: { organizationId: org } })).toBe(1);
+  });
+  it('rolls back the task when step audit fails and retry creates exactly one task', async () => {
+    await businessFixture(PERMISSIONS.TASK_CREATE); const waiting = await taskWorkflow();
+    const audit = app.get(AuditService), original = audit.record.bind(audit);
+    const spy = jest.spyOn(audit, 'record').mockImplementation(async (input, tx) => {
+      if (input.event === 'workflow.step_completed') throw new Error('Fixture step audit failure');
+      return original(input, tx);
+    });
+    try {
+      const failed = await confirm(waiting.body.id, waiting.body.stepExecutions[0].id).expect(201);
+      expect(failed.body.status).toBe('FAILED');
+      expect(await db.task.count({ where: { organizationId: org } })).toBe(0);
+    } finally { spy.mockRestore(); }
+    await http().post(route(`/${waiting.body.id}/retry`)).set(auth()).send({}).expect(201);
+    expect(await db.task.count({ where: { organizationId: org } })).toBe(1);
+  });
+  it('updates the actual contract expiry only after human confirmation and document authorization', async () => {
+    const employee = await businessFixture(PERMISSIONS.DOCUMENT_UPDATE);
+    const doc = await db.employeeDocument.create({ data: { organizationId: org, employeeId: employee.id, category: 'LABOR_CONTRACT', title: 'Fixture contract', expiryDate: new Date(Date.now() + 30 * 86400000) } });
+    await db.workflowDefinition.update({ where: { id: definition }, data: { triggerType: 'CONTRACT_RENEWAL', steps: JSON.stringify([{ name: 'Review', type: 'HUMAN_CONFIRMATION' }, { name: 'Renew', type: 'ACTION', payload: { action: 'RENEW_CONTRACT' } }]) } });
+    const expiry = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+    const waiting = await http().post(route()).set(auth()).send({ workflowDefinitionId: definition, title: 'Renew fixture contract', data: { documentId: doc.id, newExpiryDate: expiry } }).expect(201);
+    expect((await db.employeeDocument.findUniqueOrThrow({ where: { id: doc.id } })).expiryDate).toEqual(doc.expiryDate);
+    const done = await confirm(waiting.body.id, waiting.body.stepExecutions[0].id).expect(201);
+    expect(done.body.status).toBe('COMPLETED');
+    expect((await db.employeeDocument.findUniqueOrThrow({ where: { id: doc.id } })).expiryDate?.toISOString().slice(0, 10)).toBe(expiry);
   });
 });

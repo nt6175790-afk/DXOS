@@ -1,5 +1,11 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
+import { FilesModule } from '../files/files.module';
+import { AiActionsController } from './ai-actions.controller';
+import { AiTaskDraftsService } from './ai-task-drafts.service';
+import { AiKnowledgeService } from './ai-knowledge.service';
+import { PdfTextService } from './pdf-text.service';
+import { SearchKnowledgeTool } from './tools/search-knowledge.tool';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { RbacModule } from '../rbac/rbac.module';
@@ -48,19 +54,19 @@ const TOOLS = [
   ListTasksTool, GetTaskTool, ListPendingApprovalsTool, ListDocumentAlertsTool,
   GetMyScheduleTool,
   GetHrMetricsTool, GetOverviewTool, ListCalendarEventsTool, ListDepartmentsTool, FindEmployeeTool, ListAttendanceExceptionsTool, ListLeavesTool,
-  CalculateTool,
+  CalculateTool, SearchKnowledgeTool,
 ];
 
 @Module({
   imports: [
-    AuthModule, RbacModule, AuditWriterModule,
+    AuthModule, RbacModule, AuditWriterModule, FilesModule,
     // Domain modules whose read services the tools reuse.
     ApprovalModule, AttendanceModule, CalendarModule, DashboardModule, DepartmentsModule, DocumentsModule,
     LeaveModule, PeopleModule, ReportsModule, SelfServiceModule, WorkModule,
   ],
-  controllers: [AiController],
+  controllers: [AiController, AiActionsController],
   providers: [
-    AiService,
+    AiService, AiTaskDraftsService, AiKnowledgeService, PdfTextService,
     AiDataService,
     AiAnalyticsService,
     MockAiProvider,

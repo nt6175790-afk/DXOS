@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
 import { getErrorMessage } from '@/api/error-message';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Modal } from '@/components/ui/Modal';
+import { listDocuments, type EmployeeDocument } from '@/api/documents';
 import {
   GitMerge,
   CheckCircle2,
@@ -45,6 +48,21 @@ export function WorkflowsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState<WorkflowDefinition | null>(null);
+  const [startTitle, setStartTitle] = useState('');
+  const [documentId, setDocumentId] = useState('');
+  const [newExpiryDate, setNewExpiryDate] = useState('');
+  const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
+  const [documentsCursor, setDocumentsCursor] = useState<string | null>(null);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const scope = useRef(orgId); scope.current = orgId;
+  useEffect(() => { setInstances([]); setDefinitions([]); setSelectedInstance(null); setStarting(null); setDocuments([]); setConfirmingStepId(null); setActionLoading(false); setActionSuccess(null); setError(null); }, [orgId]);
+  const loadDocuments = async (after?: string) => {
+    if (!orgId) return; const requested = orgId; setDocumentsLoading(true);
+    try { const page = await listDocuments(orgId, { limit: 100, cursor: after }); if (scope.current !== requested) return; setDocuments(previous => after ? [...previous, ...page.items] : page.items); setDocumentsCursor(page.nextCursor); }
+    catch { if (scope.current === requested) setError('Không tải được hồ sơ. Kiểm tra quyền xem tài liệu.'); }
+    finally { if (scope.current === requested) setDocumentsLoading(false); }
+  };
 
   const loadData = useCallback(async () => {
     if (!orgId) return;
@@ -57,13 +75,14 @@ export function WorkflowsPage() {
           status: statusFilter === 'ALL' ? undefined : statusFilter,
         }),
       ]);
+      if (scope.current !== orgId) return;
       setDefinitions(defs);
       setInstances(insts);
       setSelectedInstance(current => current ? insts.find(i => i.id === current.id) || null : null);
     } catch (err) {
-      setError(getErrorMessage(err, 'Lỗi khi tải dữ liệu quy trình'));
+      if (scope.current === orgId) setError(getErrorMessage(err, 'Lỗi khi tải dữ liệu quy trình'));
     } finally {
-      setLoading(false);
+      if (scope.current === orgId) setLoading(false);
     }
   }, [orgId, statusFilter]);
 
@@ -71,23 +90,31 @@ export function WorkflowsPage() {
     loadData();
   }, [loadData]);
 
-  const handleStartWorkflow = async (definitionId: string) => {
+  const handleStartWorkflow = (definitionId: string) => {
+    const def = definitions.find(d => d.id === definitionId); if (!def) return;
+    setStarting(def); setStartTitle(def.name); setDocumentId(''); setNewExpiryDate(''); setError(null);
+    if (['CONTRACT_RENEWAL', 'MISSING_DOCUMENT'].includes(def.triggerType)) void loadDocuments();
+  };
+  const submitWorkflow = async () => {
     if (!orgId) return;
+    if (!starting) return;
     try {
       setActionLoading(true);
       setError(null);
-      const def = definitions.find((d) => d.id === definitionId);
       const newInst = await workflowsApi.startWorkflow(orgId, {
-        workflowDefinitionId: definitionId,
-        title: def?.name || 'Quy trình mới',
+        workflowDefinitionId: starting.id,
+        title: startTitle,
+        data: starting.triggerType === 'TASK_REQUEST' ? { task: { title: startTitle } } : { documentId, ...(newExpiryDate ? { newExpiryDate } : {}) },
       });
+      if (scope.current !== orgId) return;
+      setStarting(null);
       setActionSuccess(`Khởi chạy thành công quy trình "${newInst.title}"!`);
       await loadData();
-      setSelectedInstance(newInst);
+      if (scope.current === orgId) setSelectedInstance(newInst);
     } catch (err) {
-      setError(getErrorMessage(err, 'Lỗi khi khởi chạy quy trình'));
+      if (scope.current === orgId) setError(getErrorMessage(err, 'Lỗi khi khởi chạy quy trình'));
     } finally {
-      setActionLoading(false);
+      if (scope.current === orgId) setActionLoading(false);
     }
   };
 
@@ -99,15 +126,17 @@ export function WorkflowsPage() {
       const updated = await workflowsApi.confirmStep(orgId, instanceId, stepId, {
         comments: confirmComments || undefined,
       });
+      if (scope.current !== orgId) return;
       setConfirmingStepId(null);
       setConfirmComments('');
-      setActionSuccess('Xác nhận thành công! Quy trình đã tự động chuyển sang bước tiếp theo.');
+      if (updated.status === 'FAILED') { setActionSuccess(null); setError('Bước nghiệp vụ chưa thành công. Kiểm tra quyền, hồ sơ và dữ liệu đầu vào trước khi thử lại.'); }
+      else setActionSuccess('Đã xác nhận; kết quả xử lý nghiệp vụ đã được cập nhật.');
       await loadData();
-      setSelectedInstance(updated);
+      if (scope.current === orgId) setSelectedInstance(updated);
     } catch (err) {
-      setError(getErrorMessage(err, 'Lỗi khi xác nhận bước quy trình'));
+      if (scope.current === orgId) setError(getErrorMessage(err, 'Lỗi khi xác nhận bước quy trình'));
     } finally {
-      setActionLoading(false);
+      if (scope.current === orgId) setActionLoading(false);
     }
   };
 
@@ -117,13 +146,14 @@ export function WorkflowsPage() {
     try {
       setActionLoading(true);
       const updated = await workflowsApi.cancelWorkflow(orgId, instanceId, 'Hủy theo yêu cầu quản trị viên');
+      if (scope.current !== orgId) return;
       setActionSuccess('Đã hủy quy trình thành công.');
       await loadData();
-      setSelectedInstance(updated);
+      if (scope.current === orgId) setSelectedInstance(updated);
     } catch (err) {
-      setError(getErrorMessage(err, 'Lỗi khi hủy quy trình'));
+      if (scope.current === orgId) setError(getErrorMessage(err, 'Lỗi khi hủy quy trình'));
     } finally {
-      setActionLoading(false);
+      if (scope.current === orgId) setActionLoading(false);
     }
   };
 
@@ -133,6 +163,19 @@ export function WorkflowsPage() {
 
   return (
     <div className="space-y-6" data-testid="workflows-page">
+      <Modal open={Boolean(starting)} onClose={() => { if (!actionLoading) setStarting(null); }} title="Khởi chạy quy trình">
+        <form className="space-y-4" onSubmit={e => { e.preventDefault(); void submitWorkflow(); }}>
+          <p className="text-sm text-slate-500">{starting?.name}. Kiểm tra nội dung trước khi gửi đến bước người xác nhận.</p>
+          <label className="block text-sm">Loại quy trình<select className="mt-1 w-full rounded-lg border p-2" value={starting?.id ?? ""} disabled={actionLoading} onChange={e => handleStartWorkflow(e.target.value)}>{definitions.filter(d => d.isActive).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
+          <label className="block text-sm">Tên quy trình / công việc<input required maxLength={200} value={startTitle} onChange={e => setStartTitle(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
+          {starting && ['CONTRACT_RENEWAL', 'MISSING_DOCUMENT'].includes(starting.triggerType) && <>
+            <label className="block text-sm">Hồ sơ cần xử lý<select required value={documentId} onChange={e => setDocumentId(e.target.value)} className="mt-1 w-full rounded-lg border p-2"><option value="">{documentsLoading ? 'Đang tải hồ sơ...' : 'Chọn hồ sơ'}</option>{documents.filter(d => starting.triggerType !== 'CONTRACT_RENEWAL' || d.category === 'LABOR_CONTRACT').map(d => <option key={d.id} value={d.id}>{d.title}</option>)}</select></label>
+            {documentsCursor && <button type="button" disabled={documentsLoading} onClick={() => void loadDocuments(documentsCursor)} className="text-sm text-brand-700 underline">Tải thêm hồ sơ</button>}
+            {starting.triggerType === 'CONTRACT_RENEWAL' && <label className="block text-sm">Ngày hết hạn mới<input required type="date" value={newExpiryDate} onChange={e => setNewExpiryDate(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>}
+          </>}
+          {error && <p role="alert" className="text-sm text-red-700">{error}</p>}<button disabled={actionLoading || documentsLoading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Bắt đầu quy trình</button>
+        </form>
+      </Modal>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -336,6 +379,7 @@ export function WorkflowsPage() {
                           {inst.status === 'RUNNING' && 'ĐANG CHẠY'}
                           {inst.status === 'COMPLETED' && 'HOÀN TẤT'}
                           {inst.status === 'CANCELLED' && 'ĐÃ HỦY'}
+                          {inst.status === 'FAILED' && 'CẦN XỬ LÝ LỖI'}
                         </span>
                         <span className="text-xs text-slate-400">
                           {new Date(inst.createdAt).toLocaleDateString('vi-VN')}
@@ -404,6 +448,15 @@ export function WorkflowsPage() {
                 </div>
               </div>
 
+              {selectedInstance.status === 'FAILED' && <div role="alert" className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                <p>Bước nghiệp vụ chưa hoàn tất. Kiểm tra quyền và hồ sơ. Nếu đầu vào sai, hủy và tạo quy trình mới; thử lại giữ nguyên nội dung đã xác nhận.</p>
+                {canUpdate && <button disabled={actionLoading} className="rounded-lg border border-red-300 px-3 py-2" onClick={async () => {
+                  if (!orgId) return; const target = orgId; setActionLoading(true);
+                  try { const updated = await workflowsApi.retry(orgId, selectedInstance.id); if (scope.current !== target) return; await loadData(); if (scope.current === target) setSelectedInstance(updated); }
+                  catch { if (scope.current === target) setError('Không thử lại được quy trình. Kiểm tra quyền và trạng thái.'); }
+                  finally { if (scope.current === target) setActionLoading(false); }
+                }}>Thử lại bước lỗi</button>}
+              </div>}
               {/* Timeline Steps */}
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -412,9 +465,12 @@ export function WorkflowsPage() {
 
                 <div className="space-y-4">
                   {selectedInstance.stepExecutions?.map((step, idx) => {
-                    const isWaitingConfirm =
-                      step.status === 'WAITING_CONFIRMATION' ||
-                      (step.stepType === 'HUMAN_CONFIRMATION' && step.status === 'IN_PROGRESS');
+                    const isWaitingConfirm = selectedInstance.status === 'WAITING' &&
+                      (step.status === 'WAITING_CONFIRMATION' ||
+                      (step.stepType === 'HUMAN_CONFIRMATION' && step.status === 'IN_PROGRESS'));
+                    let result: Record<string, unknown> = {};
+                    try { result = JSON.parse(step.resultPayload || '{}'); } catch { /* legacy result */ }
+                    const taskId = typeof result?.taskId === 'string' && /^[0-9a-f-]{36}$/.test(result.taskId) ? result.taskId : null;
 
                     return (
                       <div
@@ -461,6 +517,7 @@ export function WorkflowsPage() {
                               {step.status === 'COMPLETED' && 'Đã hoàn tất'}
                               {isWaitingConfirm && 'Chờ HR xác nhận'}
                               {step.status === 'PENDING' && 'Chưa thực hiện'}
+                              {step.status === 'FAILED' && 'Xử lý chưa thành công'}
                             </span>
                           </div>
 
@@ -479,6 +536,8 @@ export function WorkflowsPage() {
                               <span>{step.comments}</span>
                             </div>
                           )}
+                          {step.status === 'COMPLETED' && taskId && <Link to={`/tasks/${taskId}`} className="mt-2 inline-block text-sm font-medium text-brand-700 underline">Mở công việc đã tạo</Link>}
+                          {step.status === 'COMPLETED' && typeof result?.documentId === 'string' && <Link to="/documents" className="mt-2 inline-block text-sm font-medium text-brand-700 underline">Xem hồ sơ đã cập nhật{typeof result.expiryDate === 'string' ? ` (hết hạn ${result.expiryDate})` : ''}</Link>}
 
                           {/* Interactive Human Confirmation Box */}
                           {isWaitingConfirm && (

@@ -13,9 +13,10 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { ForbiddenState } from '@/components/ui/ForbiddenState';
 import { FormField } from '@/components/ui/FormField';
 import { MembersTab } from './MembersTab';
+import { AccountAdministration } from './AccountAdministration';
 import { format } from 'date-fns';
 
-type SettingsTab = 'general' | 'members';
+type SettingsTab = 'general' | 'members' | 'accounts';
 
 export function SettingsPage() {
   const { currentOrg, setCurrentOrg, refreshOrganizations } = useOrganization();
@@ -27,6 +28,7 @@ export function SettingsPage() {
   const canReadOrg = hasPermission('organization:read');
   const canUpdateOrg = hasPermission('organization:update');
   const canReadRoles = hasPermission('role:read');
+  const canManageAccounts = hasPermission('user:read') || hasPermission('role:create') || hasPermission('role:update') || hasPermission('role:delete');
 
   const [name, setName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -76,8 +78,9 @@ export function SettingsPage() {
   if (!currentOrg) return null;
   if (isPermissionLoading) return <LoadingState message="Đang kiểm tra quyền hạn..." />;
 
-  if (!canReadOrg && !canReadRoles) return <ForbiddenState message="Bạn không có quyền xem cài đặt tổ chức." />;
-  const visibleTab = activeTab === 'general' ? (canReadOrg ? 'general' : 'members') : (canReadRoles ? 'members' : 'general');
+  if (!canReadOrg && !canReadRoles && !canManageAccounts) return <ForbiddenState message="Bạn không có quyền xem cài đặt tổ chức." />;
+  const availableTabs: SettingsTab[] = [...(canReadOrg ? ['general' as const] : []), ...(canReadRoles ? ['members' as const] : []), ...(canManageAccounts ? ['accounts' as const] : [])];
+  const visibleTab = availableTabs.includes(activeTab) ? activeTab : availableTabs[0];
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -88,7 +91,9 @@ export function SettingsPage() {
 
       {/* Tabs navigation */}
       <div className="border-b border-slate-200" role="tablist" aria-label="Cài đặt">
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
+          {canManageAccounts && <button type="button" role="tab" aria-selected={visibleTab === 'accounts'} onClick={() => setActiveTab('accounts')}
+            className={`pb-3 px-1 border-b-2 text-sm font-medium ${visibleTab === 'accounts' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}>Quản trị tài khoản</button>}
           {canReadOrg && (
             <button
               type="button"
@@ -199,6 +204,7 @@ export function SettingsPage() {
       )}
 
       {visibleTab === 'members' && <MembersTab />}
+      {visibleTab === 'accounts' && <AccountAdministration key={currentOrg.id} />}
     </div>
   );
 }

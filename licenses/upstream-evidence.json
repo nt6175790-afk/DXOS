@@ -187,5 +187,14 @@
       "packageVersion": "4.63.1",
       "ref": "78bfef0cb94479566f81012fafa372c84b90bd34"
     }
+  ],
+  "@napi-rs/canvas-win32-x64-msvc@1.0.13": [
+    {
+      "file": "texts/0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce.txt",
+      "sha256": "0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce",
+      "source": "https://raw.githubusercontent.com/Brooooooklyn/canvas/v1.0.13/LICENSE",
+      "packageVersion": "1.0.13",
+      "ref": "v1.0.13"
+    }
   ]
 }

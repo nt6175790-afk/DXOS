@@ -2042,6 +2042,152 @@
   },
   {
     "area": "backend",
+    "location": "node_modules/@napi-rs/canvas",
+    "name": "@napi-rs/canvas",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": true,
+    "texts": [
+      {
+        "file": "texts/0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce.txt",
+        "sha256": "0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce",
+        "source": "node_modules/@napi-rs/canvas/LICENSE"
+      }
+    ],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-android-arm64",
+    "name": "@napi-rs/canvas-android-arm64",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-darwin-arm64",
+    "name": "@napi-rs/canvas-darwin-arm64",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-darwin-x64",
+    "name": "@napi-rs/canvas-darwin-x64",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-linux-arm-gnueabihf",
+    "name": "@napi-rs/canvas-linux-arm-gnueabihf",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-linux-arm64-gnu",
+    "name": "@napi-rs/canvas-linux-arm64-gnu",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-linux-arm64-musl",
+    "name": "@napi-rs/canvas-linux-arm64-musl",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-linux-riscv64-gnu",
+    "name": "@napi-rs/canvas-linux-riscv64-gnu",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-linux-x64-gnu",
+    "name": "@napi-rs/canvas-linux-x64-gnu",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-linux-x64-musl",
+    "name": "@napi-rs/canvas-linux-x64-musl",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-win32-arm64-msvc",
+    "name": "@napi-rs/canvas-win32-arm64-msvc",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": false,
+    "texts": [],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/@napi-rs/canvas-win32-x64-msvc",
+    "name": "@napi-rs/canvas-win32-x64-msvc",
+    "version": "1.0.13",
+    "license": "MIT",
+    "development": false,
+    "installed": true,
+    "texts": [
+      {
+        "file": "texts/0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce.txt",
+        "sha256": "0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce",
+        "source": "https://raw.githubusercontent.com/Brooooooklyn/canvas/v1.0.13/LICENSE",
+        "packageVersion": "1.0.13",
+        "ref": "v1.0.13"
+      }
+    ],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
     "location": "node_modules/@napi-rs/wasm-runtime",
     "name": "@napi-rs/wasm-runtime",
     "version": "1.2.5",
@@ -9168,6 +9314,23 @@
         "file": "texts/52e92576851154bad7737e90cc72818936f43665cb0e3f7428ed8edc8cc5709b.txt",
         "sha256": "52e92576851154bad7737e90cc72818936f43665cb0e3f7428ed8edc8cc5709b",
         "source": "node_modules/pathe/LICENSE"
+      }
+    ],
+    "supplementalNotices": []
+  },
+  {
+    "area": "backend",
+    "location": "node_modules/pdfjs-dist",
+    "name": "pdfjs-dist",
+    "version": "6.4.299",
+    "license": "Apache-2.0",
+    "development": false,
+    "installed": true,
+    "texts": [
+      {
+        "file": "texts/0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594.txt",
+        "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "source": "node_modules/pdfjs-dist/LICENSE"
       }
     ],
     "supplementalNotices": []

@@ -9,6 +9,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
+import { WorkflowActionsService, workflowObject } from './workflow-actions.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthorizationService } from '../rbac/authorization.service';
 import { isOrganizationIdentifier, PERMISSIONS } from '../rbac/permission-catalog';
@@ -49,6 +51,7 @@ const DEFAULT_WORKFLOWS: WorkflowDefinitionConfig[] = [
         name: 'Hoàn tất cập nhật hồ sơ & lưu trữ tài liệu',
         type: WORKFLOW_STEP_TYPES.ACTION,
         description: 'Ghi nhận gia hạn hợp đồng thành công và thông báo cho các bên.',
+        payload: { action: 'RENEW_CONTRACT' },
       },
     ],
   },
@@ -71,9 +74,14 @@ const DEFAULT_WORKFLOWS: WorkflowDefinitionConfig[] = [
         name: 'Cập nhật trạng thái tuân thủ hồ sơ',
         type: WORKFLOW_STEP_TYPES.ACTION,
         description: 'Hoàn tất hồ sơ tuân thủ compliance.',
+        payload: { action: 'ACTIVATE_DOCUMENT' },
       },
     ],
   },
+  { name: 'Quy trình tạo công việc có xác nhận', triggerType: 'TASK_REQUEST',
+    description: 'Người có quyền xác nhận nội dung trước khi tạo công việc thật.',
+    steps: [{ name: 'Xác nhận nội dung công việc', type: WORKFLOW_STEP_TYPES.HUMAN_CONFIRMATION },
+      { name: 'Tạo công việc', type: WORKFLOW_STEP_TYPES.TASK, payload: { action: 'CREATE_TASK' } }] },
 ];
 
 @Injectable()
@@ -83,6 +91,7 @@ export class WorkflowService implements OnModuleInit {
     private readonly authorization: AuthorizationService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly actions: WorkflowActionsService,
   ) {}
 
   async onModuleInit() {
@@ -182,9 +191,10 @@ export class WorkflowService implements OnModuleInit {
     }
 
     const steps: WorkflowStepConfig[] = JSON.parse(definition.steps || '[]');
-    if (steps.length === 0) {
+    if (!Array.isArray(steps) || steps.length === 0 || steps.length > 20 || steps.some(s => !Object.values(WORKFLOW_STEP_TYPES).includes(s.type))) {
       throw new BadRequestException('Workflow definition has no steps defined');
     }
+    if (dto.data && JSON.stringify(dto.data).length > 16000) throw new BadRequestException('Workflow input is too large');
 
     // Determine a valid 36-char user ID for ownerUserId
     const adminMember = await this.prisma.organizationMembership.findFirst({
@@ -285,6 +295,12 @@ export class WorkflowService implements OnModuleInit {
         data: { status: WORKFLOW_STATUS.RUNNING },
       });
       if (claim.count !== 1) throw new ConflictException('Workflow state changed; reload before confirming');
+      if (dto.resultPayload) {
+        if (Object.keys(dto.resultPayload).some(key => !['documentId', 'newExpiryDate', 'task'].includes(key))) throw new BadRequestException('Unsupported confirmation fields');
+        const data = { ...workflowObject(instance.data), ...dto.resultPayload };
+        if (JSON.stringify(data).length > 16000) throw new BadRequestException('Workflow input is too large');
+        await tx.workflowInstance.update({ where: { id: instance.id }, data: { data: JSON.stringify(data) } });
+      }
       await tx.workflowStepExecution.update({
         where: { id: step.id },
         data: {
@@ -317,7 +333,6 @@ export class WorkflowService implements OnModuleInit {
     instanceId: string,
     dto: CancelWorkflowDto,
   ) {
-    void dto; // Cancellation reason is accepted by the existing contract, not persisted.
     if (actorId !== 'system') {
       await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_CANCEL);
     }
@@ -328,7 +343,7 @@ export class WorkflowService implements OnModuleInit {
     if (!instance) {
       throw new NotFoundException(`Workflow instance ${instanceId} not found`);
     }
-    if (![WORKFLOW_STATUS.RUNNING, WORKFLOW_STATUS.WAITING].includes(instance.status as 'RUNNING' | 'WAITING')) {
+    if (![WORKFLOW_STATUS.RUNNING, WORKFLOW_STATUS.WAITING, WORKFLOW_STATUS.FAILED].includes(instance.status as 'RUNNING' | 'WAITING' | 'FAILED')) {
       throw new BadRequestException('Only an active workflow can be cancelled');
     }
 
@@ -339,6 +354,7 @@ export class WorkflowService implements OnModuleInit {
         data: {
           status: WORKFLOW_STATUS.CANCELLED,
           completedAt: new Date(),
+          data: JSON.stringify({ ...workflowObject(instance.data), cancellation: { reason: dto.reason ?? null, actorUserId: actorId, at: new Date().toISOString() } }),
         },
       });
       if (claim.count !== 1) throw new ConflictException('Workflow state changed; reload before cancelling');
@@ -359,6 +375,20 @@ export class WorkflowService implements OnModuleInit {
     return updated;
   }
 
+  async retry(actorId: string, organizationId: string, instanceId: string) {
+    await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_UPDATE);
+    await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_READ);
+    const instance = await this.prisma.workflowInstance.findFirst({ where: { id: instanceId, organizationId } });
+    if (!instance) throw new NotFoundException();
+    if (instance.status !== WORKFLOW_STATUS.FAILED) throw new ConflictException('Only failed workflows can be retried');
+    await this.prisma.$transaction(async tx => {
+      const claimed = await tx.workflowInstance.updateMany({ where: { id: instanceId, organizationId, status: WORKFLOW_STATUS.FAILED }, data: { status: WORKFLOW_STATUS.RUNNING } });
+      if (claimed.count !== 1) throw new ConflictException();
+      await this.audit.record({ event: AUDIT_EVENTS.WORKFLOW_RETRIED, organizationId, actorUserId: actorId, resourceId: instanceId }, tx);
+    });
+    return this.advanceWorkflow(actorId, organizationId, instanceId, instance.currentStepIndex);
+  }
+
   private async advanceWorkflow(
     actorId: string,
     organizationId: string,
@@ -368,6 +398,7 @@ export class WorkflowService implements OnModuleInit {
     const instance = await this.prisma.workflowInstance.findFirst({
       where: { id: instanceId, organizationId },
       include: {
+        definition: true,
         stepExecutions: { orderBy: { stepIndex: 'asc' } },
       },
     });
@@ -384,9 +415,11 @@ export class WorkflowService implements OnModuleInit {
     };
     for (let i = startFromIndex; i < steps.length; i++) {
       const step = steps[i];
+      if (step.status === WORKFLOW_STEP_STATUS.COMPLETED) continue;
 
       if (step.stepType === WORKFLOW_STEP_TYPES.NOTIFICATION) {
         // Safe notification
+        let sent = false;
         try {
           if (isOrganizationIdentifier(actorId)) {
             await this.notifications.createForRecipient({
@@ -398,6 +431,7 @@ export class WorkflowService implements OnModuleInit {
                 message: `Đang xử lý bước: ${step.stepName} trong quy trình "${instance.title}".`,
               },
             });
+            sent = true;
           }
         } catch {
           // Non-blocking notification delivery
@@ -409,7 +443,7 @@ export class WorkflowService implements OnModuleInit {
             status: WORKFLOW_STEP_STATUS.COMPLETED,
             executedAt: new Date(),
             completedAt: new Date(),
-            resultPayload: JSON.stringify({ sent: true, timestamp: new Date().toISOString() }),
+            resultPayload: JSON.stringify({ sent, timestamp: new Date().toISOString() }),
           },
         });
         await updateActiveState({ currentStepIndex: i });
@@ -449,17 +483,27 @@ export class WorkflowService implements OnModuleInit {
         // Return current paused state
         return this.getInstance(actorId, organizationId, instance.id);
       } else if (step.stepType === WORKFLOW_STEP_TYPES.ACTION || step.stepType === WORKFLOW_STEP_TYPES.TASK) {
-        // Execute safe action
-        await this.prisma.workflowStepExecution.update({
-          where: { id: step.id },
-          data: {
-            status: WORKFLOW_STEP_STATUS.COMPLETED,
-            executedAt: new Date(),
-            completedAt: new Date(),
-            resultPayload: JSON.stringify({ action: 'SUCCESS', details: 'Completed automatically.' }),
-          },
-        });
-        await updateActiveState({ currentStepIndex: i });
+        try {
+          await this.prisma.$transaction(async tx => {
+            const locked = await tx.workflowInstance.updateMany({ where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING }, data: { currentStepIndex: i } });
+            if (locked.count !== 1) throw new ConflictException('Workflow is no longer running');
+            const fresh = await tx.workflowStepExecution.findFirstOrThrow({ where: { id: step.id, organizationId, workflowInstanceId: instance.id } });
+            if (fresh.status === WORKFLOW_STEP_STATUS.COMPLETED) return;
+            const current = await tx.workflowInstance.findFirstOrThrow({ where: { id: instance.id, organizationId } });
+            const result = await this.actions.execute(tx, actorId, organizationId, current, fresh, instance.definition.triggerType);
+            await tx.workflowStepExecution.update({ where: { id: step.id }, data: { status: WORKFLOW_STEP_STATUS.COMPLETED, executedAt: new Date(), completedAt: new Date(), resultPayload: JSON.stringify(result) } });
+            await this.audit.record({ event: AUDIT_EVENTS.WORKFLOW_STEP_COMPLETED, organizationId, actorUserId: actorId, resourceId: instance.id }, tx);
+          }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        } catch {
+          await this.prisma.$transaction(async tx => {
+            const changed = await tx.workflowInstance.updateMany({ where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING }, data: { status: WORKFLOW_STATUS.FAILED, currentStepIndex: i } });
+            if (changed.count) {
+              await tx.workflowStepExecution.update({ where: { id: step.id }, data: { status: WORKFLOW_STEP_STATUS.FAILED, resultPayload: JSON.stringify({ errorCode: 'WORKFLOW_ACTION_FAILED', message: 'Kiểm tra dữ liệu đầu vào và quyền nghiệp vụ trước khi thử lại.' }) } });
+              await this.audit.record({ event: AUDIT_EVENTS.WORKFLOW_STEP_FAILED, organizationId, actorUserId: isOrganizationIdentifier(actorId) ? actorId : undefined, resourceId: instance.id }, tx);
+            }
+          });
+          return this.getInstance(actorId, organizationId, instance.id);
+        }
       }
     }
 

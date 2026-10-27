@@ -380,6 +380,10 @@ export class DocumentsService {
 
   async update(userId: string, orgId: string, id: string, dto: UpdateDocumentDto) {
     return this.prisma.$transaction(async (tx) => {
+      return this.updateInTransaction(userId, orgId, id, dto, tx);
+    });
+  }
+  async updateInTransaction(userId: string, orgId: string, id: string, dto: UpdateDocumentDto, tx: Prisma.TransactionClient) {
       await this.assertActiveMember(userId, orgId, tx);
       const canUpdate = await this.authorization.can(userId, PERMISSIONS.DOCUMENT_UPDATE, orgId, tx);
       if (!canUpdate) throw new ForbiddenException();
@@ -415,7 +419,6 @@ export class DocumentsService {
       );
 
       return updated;
-    });
   }
 
   async archive(userId: string, orgId: string, id: string) {

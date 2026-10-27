@@ -139,6 +139,8 @@ model OrganizationMembership {
   files FileObject[]
   aiRequests AiRequest[]
   employee Employee?
+  aiTaskDrafts AiTaskDraft[]
+  aiKnowledgeDocuments AiKnowledgeDocument[]
   taskComments TaskComment[]
   taskAttachments TaskAttachment[]
   calendarEvents CalendarEvent[]
@@ -290,6 +292,7 @@ model Task {
   attachments        TaskAttachment[]
   checklist          TaskChecklistItem[]
   reviewer           TaskReviewer?
+  aiDrafts           AiTaskDraft[]
 
   @@unique([organizationId, id])
   @@index([organizationId, creatorEmployeeId])
@@ -500,6 +503,7 @@ model FileObject {
   uploaderMembership OrganizationMembership @relation(fields: [organizationId, uploadedByUserId], references: [organizationId, userId], onDelete: Restrict, onUpdate: Restrict, map: "file_objects_uploader_membership_fkey")
   taskAttachments TaskAttachment[]
   documentVersions DocumentVersion[]
+  aiKnowledgeDocuments AiKnowledgeDocument[]
 
   @@unique([organizationId, id])
   @@index([organizationId, uploadedByUserId], map: "file_objects_uploader_membership_idx")
@@ -538,6 +542,53 @@ enum AiRequestStatus {
   STARTED
   SUCCEEDED
   FAILED
+}
+
+// Explicit proposals only; the model cannot execute this state transition.
+model AiTaskDraft {
+  id String @id @default(uuid()) @db.Char(36)
+  organizationId String @map("organization_id") @db.Char(36)
+  userId String @map("user_id") @db.Char(36)
+  payload Json
+  expiresAt DateTime @map("expires_at") @db.DateTime(6)
+  committedAt DateTime? @map("committed_at") @db.DateTime(6)
+  taskId String? @map("task_id") @db.Char(36)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(6)
+  membership OrganizationMembership @relation(fields: [organizationId, userId], references: [organizationId, userId], onDelete: Restrict, onUpdate: Restrict)
+  task Task? @relation(fields: [organizationId, taskId], references: [organizationId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([organizationId, userId, expiresAt])
+  @@map("ai_task_drafts")
+}
+
+// Opt-in knowledge from non-HR source files. The source is reauthorized on every read.
+model AiKnowledgeDocument {
+  id String @id @default(uuid()) @db.Char(36)
+  organizationId String @map("organization_id") @db.Char(36)
+  fileId String @map("file_id") @db.Char(36)
+  indexedByUserId String @map("indexed_by_user_id") @db.Char(36)
+  sourceChecksum String @map("source_checksum") @db.Char(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(6)
+  file FileObject @relation(fields: [organizationId, fileId], references: [organizationId, id], onDelete: Cascade, onUpdate: Restrict)
+  membership OrganizationMembership @relation(fields: [organizationId, indexedByUserId], references: [organizationId, userId], onDelete: Restrict, onUpdate: Restrict)
+  chunks AiKnowledgeChunk[]
+  @@unique([organizationId, id])
+  @@unique([organizationId, fileId])
+  @@map("ai_knowledge_documents")
+}
+
+model AiKnowledgeChunk {
+  id String @id @default(uuid()) @db.Char(36)
+  organizationId String @map("organization_id") @db.Char(36)
+  documentId String @map("document_id") @db.Char(36)
+  ordinal Int @db.UnsignedInt
+  page Int @db.UnsignedInt
+  content String @db.Text
+  document AiKnowledgeDocument @relation(fields: [organizationId, documentId], references: [organizationId, id], onDelete: Cascade, onUpdate: Restrict)
+  @@unique([documentId, ordinal])
+  @@index([organizationId, documentId])
+  @@map("ai_knowledge_chunks")
 }
 
 model LeaveRequest {

@@ -8,6 +8,8 @@ import { organizationPaths, organizationSchemas } from '../organizations/organiz
 import { auditPaths, auditSchemas } from '../audit/audit.openapi';
 import { notificationPaths, notificationSchemas } from '../notifications/notification.openapi';
 import { filePaths, fileSchemas } from '../files/files.openapi';
+import { aiActionsPaths } from '../ai/ai-actions.openapi';
+import { organizationAccountPaths } from '../rbac/organization-accounts.openapi';
 import { aiPaths, aiSchemas } from '../ai/ai.openapi';
 import { departmentPaths, departmentSchemas } from '../departments/departments.openapi';
 import { employeePaths, employeeSchemas } from '../people/employees.openapi';
@@ -53,7 +55,7 @@ export class ApiDocumentationController {
         ...auditPaths,
         ...notificationPaths,
         ...filePaths,
-        ...aiPaths,
+        ...aiPaths, ...aiActionsPaths, ...organizationAccountPaths,
         ...departmentPaths,
         ...employeePaths,
         ...taskPaths,

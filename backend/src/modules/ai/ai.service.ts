@@ -117,7 +117,7 @@ export class AiService {
     return this.aiAnalytics.getAiInsightsSummary(organizationId, userId);
   }
 
-  async generate(userId: string, organizationId: string, input: GenerateAiDto) {
+  async generate(userId: string, organizationId: string, input: GenerateAiDto, trustedSystemPrompt?: string) {
     const dto = validatedAiInput(input);
     const app = this.config.getOrThrow<AppConfiguration>('app');
     if (dto.model !== undefined && dto.model !== app.aiModel) {
@@ -157,7 +157,9 @@ export class AiService {
     let result: GenerationResult;
     try {
       if (app.aiProvider === 'disabled') throw new AiProviderUnavailable();
-      if (this.agent?.canRun()) {
+      if (trustedSystemPrompt) {
+        result = await this.invoke(dto, app, requestId, trustedSystemPrompt);
+      } else if (this.agent?.canRun()) {
         // Agent path (tool-calling providers: mock, ollama, vllm): the model picks read-only tools; no fixed data block.
         result = await this.runAgent(dto, app, requestId, userId, organizationId);
       } else {

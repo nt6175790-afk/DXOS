@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
+import { createRoleOperation } from './organization-accounts.openapi';
 const error = { $ref: '#/components/responses/ErrorResponse' };
 const uuid = { type: 'string', format: 'uuid' };
 const security = [{ bearerAuth: [] }];
@@ -8,6 +9,7 @@ const membership = { name: 'membershipId', in: 'path', required: true, schema: u
 
 export const roleAdministrationPaths = {
   '/organizations/{organizationId}/roles': {
+    post: createRoleOperation,
     get: { summary: 'List organization roles', security,
       description: 'Returns same-tenant role metadata for role administration. Requires role:read. Permission assignments and other internal fields are never returned; inactive roles remain visible with isActive false.',
       parameters: [organization, { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 25 } }, { name: 'after', in: 'query', schema: uuid }],

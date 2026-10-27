@@ -133,6 +133,18 @@ Not installed means absent on this platform; collect notices again for the actua
 | backend | @jridgewell/sourcemap-codec@1.6.0 | MIT | development | [text 769d154f](texts/769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c.txt) |
 | backend | @jridgewell/trace-mapping@0.3.31 | MIT | development | [text 769d154f](texts/769d154fbde32a915af110b1123650bc79f4cbe675acc66e005265bf069c6c6c.txt) |
 | backend | @lukeed/csprng@1.1.0 | MIT | production | [text 9a9edad7](texts/9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97.txt) |
+| backend | @napi-rs/canvas@1.0.13 | MIT | production | [text 0b8e3b4f](texts/0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce.txt) |
+| backend | @napi-rs/canvas-android-arm64@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-darwin-arm64@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-darwin-x64@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-linux-arm-gnueabihf@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-linux-arm64-gnu@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-linux-arm64-musl@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-linux-riscv64-gnu@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-linux-x64-gnu@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-linux-x64-musl@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-win32-arm64-msvc@1.0.13 | MIT | production | not installed on this platform |
+| backend | @napi-rs/canvas-win32-x64-msvc@1.0.13 | MIT | production | [text 0b8e3b4f](texts/0b8e3b4f0042f33677406344854c1dcce3a2878eb3a3f6baee58c6f5752655ce.txt) |
 | backend | @napi-rs/wasm-runtime@1.2.5 | MIT | development | not installed on this platform |
 | backend | @nestjs/common@11.2.3 | MIT | production | [text 56967de9](texts/56967de93525b12a30717e4446ccef3bbe32fafdbe2350f143c1cc6971b19ed3.txt) |
 | backend | @nestjs/config@4.0.4 | MIT | production | [text a0440afa](texts/a0440afa69dae8c431e8f7b1f9c2332faa1aeadd70306601366998f60d0be449.txt) |
@@ -532,6 +544,7 @@ Not installed means absent on this platform; collect notices again for the actua
 | backend | lru-cache@11.5.3 | BlueOak-1.0.0 | development | [text 8a1af140](texts/8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004.txt) |
 | backend | path-to-regexp@8.4.2 | MIT | production | [text 4eeb3271](texts/4eeb3271453a891df609e5a9f4ee79a68307f730c13417a3bfeffa604ac8cf25.txt) |
 | backend | pathe@2.0.3 | MIT | production | [text 52e92576](texts/52e92576851154bad7737e90cc72818936f43665cb0e3f7428ed8edc8cc5709b.txt) |
+| backend | pdfjs-dist@6.4.299 | Apache-2.0 | production | [text 0d542e0c](texts/0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594.txt) |
 | backend | perfect-debounce@1.0.0 | MIT | production | [text 46231df5](texts/46231df5a7733c3f52f11b71f3df61813007745b62b09031acfb45fb42d75082.txt) |
 | backend | picocolors@1.1.1 | ISC | development | [text 6582629e](texts/6582629e2979466878f6014313dcc2f3756c9616148682227ce3063dde310750.txt) |
 | backend | picomatch@4.0.7 | MIT | development | [text d0cd141b](texts/d0cd141b0c322fded5dfad1d4645bb2fedfc05b7321fe1009469638190d59ef9.txt) |

@@ -82,4 +82,9 @@ export class WorkflowController {
   ) {
     return this.workflowService.cancelWorkflow(caller.user.id, orgId, instanceId, dto);
   }
+
+  @Post(':id/retry')
+  retry(@CurrentUser() caller: AuthenticatedRequestContext, @Param('organizationId') orgId: string, @Param('id') id: string) {
+    return this.workflowService.retry(caller.user.id, orgId, id);
+  }
 }

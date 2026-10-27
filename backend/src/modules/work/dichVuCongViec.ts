@@ -36,7 +36,11 @@ export class TasksService {
     private readonly departments: DepartmentsService, private readonly notifications: NotificationService) {}
 
   create(actorId: string, organizationId: string, input: CreateTaskDto): Promise<TaskResponse> {
-    return this.transaction(actorId, organizationId, taskPermissions('POST', input), async (tx) => {
+    return this.transaction(actorId, organizationId, taskPermissions('POST', input), tx => this.createInTransaction(actorId, organizationId, input, tx));
+  }
+  // Shared by explicit AI confirmation/workflow handlers; never bypasses domain permissions.
+  async createInTransaction(actorId: string, organizationId: string, input: CreateTaskDto, tx: Prisma.TransactionClient): Promise<TaskResponse> {
+      for (const key of taskPermissions('POST', input)) if (!await this.authorization.can(actorId, key, organizationId, tx)) throw new ForbiddenException();
       const creator = await this.employees.eligibleCreator(organizationId, actorId, tx);
       const assignee = input.assigneeEmployeeId ? await this.employees.eligibleAssignee(organizationId, input.assigneeEmployeeId, tx) : null;
       if (input.departmentId) await this.departments.assertActiveReference(organizationId, input.departmentId, tx);
@@ -50,7 +54,6 @@ export class TasksService {
         await this.notify(actorId, organizationId, row.id, assignee.userId, tx);
       }
       return row;
-    });
   }
   list(actorId: string, organizationId: string, query: ListTasksDto) {
     return this.transaction(actorId, organizationId, [PERMISSIONS.TASK_READ], async (tx) => {

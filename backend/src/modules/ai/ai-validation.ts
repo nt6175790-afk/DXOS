@@ -38,7 +38,7 @@ export function validatedAiResult(result: unknown, outputCap: number): AiProvide
 }
 
 /** Internal routes a citation may link to (frontend router). Anything else is dropped. */
-const CITATION_ROUTE = /^\/(?:tasks\/[0-9a-f-]{36}|tasks|approvals|leave|documents|people|departments|calendar|attendance|my-schedule|reports|dashboard)$/;
+const CITATION_ROUTE = /^\/(?:tasks\/[0-9a-f-]{36}|tasks|approvals|leave|documents|people|departments|calendar|attendance|my-schedule|reports|dashboard|files)$/;
 const CITATION_TYPES: readonly string[] = AI_CITATION_TYPES;
 
 export interface GenerationResult {

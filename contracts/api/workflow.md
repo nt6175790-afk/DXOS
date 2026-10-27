@@ -9,7 +9,7 @@ Prefix `/api/v1/organizations/:organizationId/workflows`. JWT, ACTIVE membership
 | GET `/:id` | workflow:read | 200, instance kèm definition và stepExecutions |
 | POST `/` | workflow:create | 201, tạo từ workflowDefinitionId UUID v4 ACTIVE, title bắt buộc ≤255, entityType/entityId/data tùy chọn |
 | POST `/:id/steps/:stepId/confirm` | workflow:update | 201, xác nhận bước HUMAN_CONFIRMATION hiện tại ở WAITING; comments ≤1000, resultPayload tùy chọn |
-| POST `/:id/cancel` | workflow:cancel | 201, chỉ instance RUNNING/WAITING; reason ≤1000 hiện chưa lưu |
+| POST `/:id/cancel` | workflow:cancel | 201, instance RUNNING/WAITING/FAILED; reason ≤1000 được lưu trong cancellation metadata |
 
 Instance có id, organizationId, workflowDefinitionId, title, status, currentStepIndex, ownerUserId, startedAt/completedAt, timestamp, definition/steps khi service trả chúng. Step có trạng thái, thứ tự, người xác nhận và thời gian. Payload config/result/data là chuỗi JSON theo model hiện có. Không đưa credentials hoặc nội dung nhạy cảm vào các payload này. OpenAPI mô tả phần metadata chính, không đổi shape runtime.
 
@@ -17,6 +17,16 @@ Instance có id, organizationId, workflowDefinitionId, title, status, currentSte
 
 Không có cursor/total cho danh sách workflow hiện tại: đây là recent list tối đa 50, không hứa liệt kê toàn bộ lịch sử. Default definitions là catalog tích hợp nhỏ. Không thay API để giả có pagination chưa triển khai.
 
-Audit tạo/xác nhận/hủy/hoàn tất dùng catalog hiện có. ACTION/TASK engine chỉ đánh dấu bước, không thực thi cập nhật nghiệp vụ. Không quảng cáo đã gia hạn hợp đồng hoặc tạo task từ bước đó; action nghiệp vụ của Automation là module khác.
+Audit tạo/xác nhận/hủy/hoàn tất/thất bại/retry dùng catalog hiện có. ACTION/TASK thực thi handler allowlist theo các quy tắc giao dịch ở dưới.
 
 Tương thích: không thay tên route, success status, schema hoặc grant. Invalid list query trước đây có thể gây lỗi Prisma 500 nay bị DTO từ chối 400. Định nghĩa inactive và xác nhận sau hủy/đóng nay bị từ chối; đây là sửa lifecycle, không nới quyền. Test `open-core-workflow.mysql-spec.ts` chạy HTTP + MySQL thật và audit.
+
+## Thao tác nghiệp vụ có xác nhận
+
+`TASK` chạy handler `CREATE_TASK`: DTO CreateTaskDto hiện có; `data.task` chứa title, description, priority, dueAt, departmentId và assigneeEmployeeId (các field tùy chọn). Nếu thiếu task thì dùng tên instance làm title. Cần workflow:create/update/read và quyền task:create; gán nhân viên cần task:assign; mọi reference kiểm tra tenant/ACTIVE bằng service Công việc hiện có. Không tự cấp quyền.
+
+`ACTION` chỉ nhận handler allowlist `RENEW_CONTRACT` hoặc `ACTIVATE_DOCUMENT`. Cần một bước HUMAN_CONFIRMATION đã hoàn tất trong chính instance. Truyền `data.documentId` và `data.newExpiryDate` (YYYY-MM-DD) khi khởi chạy; ngày gia hạn phải hợp lệ, ở tương lai và kéo dài hạn cũ. Chỉ gia hạn LABOR_CONTRACT, dùng service tài liệu hiện có và quyền document:update/sensitive tương ứng. ACTIVATE_DOCUMENT không được làm sống lại hồ sơ đã hết hạn nếu chưa gia hạn. Handler/field lạ bị từ chối, không chạy script/SQL tùy ý.
+
+Tác động task/document, kết quả step và audit nằm trong một transaction Serializable. Thất bại không ghi tác động một phần; instance/step FAILED với mã lỗi an toàn. `POST /workflows/{id}/retry` cần workflow:update/read và quyền nghiệp vụ hiện tại, chỉ nhận FAILED; bước đã commit không chạy lại. Không sửa đầu vào của instance FAILED qua retry: hủy và tạo lại nếu nhập sai. Xác nhận trùng không tạo task trùng. Hủy lưu lý do, không hoàn tác tác động của các bước trước đã commit. Các bước notification vẫn best-effort và ghi đúng sent=true/false, không giả báo gửi thành công.
+
+Giao diện khởi chạy cho phép chọn hồ sơ từ danh sách được phân quyền, nhập hạn gia hạn hoặc tên công việc; kết quả step có link tới task/document. Không ghi password/secret vào data/resultPayload.

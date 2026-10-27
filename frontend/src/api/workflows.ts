@@ -65,6 +65,7 @@ export interface ConfirmStepPayload {
 }
 
 export const workflowsApi = {
+  retry: async (orgId: string, id: string): Promise<WorkflowInstance> => (await api.post(`/organizations/${orgId}/workflows/${id}/retry`, {})).data,
   listDefinitions: async (orgId: string): Promise<WorkflowDefinition[]> => {
     const res = await api.get<WorkflowDefinition[]>(`/organizations/${orgId}/workflows/definitions`);
     return res.data;

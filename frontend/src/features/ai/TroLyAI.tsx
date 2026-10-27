@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
+import { AiActionsPanel } from './AiActionsPanel';
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -312,6 +313,7 @@ export function AiAssistantPage() {
         }
       />
 
+      {orgId && <AiActionsPanel key={orgId} organizationId={orgId} />}
       {/* Main chat window */}
       <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-0">
         <div

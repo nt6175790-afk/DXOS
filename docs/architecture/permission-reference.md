@@ -83,19 +83,19 @@
 
 | Quyền | Cho phép làm gì | Trạng thái |
 | --- | --- | --- |
-| `user:read` | Chưa có API thực thi tương ứng; không mô tả như tính năng đã dùng được | Chỉ khai báo trong catalog |
-| `user:create` | Chưa có API thực thi tương ứng; không mô tả như tính năng đã dùng được | Chỉ khai báo trong catalog |
-| `user:update` | Chưa có API thực thi tương ứng; không mô tả như tính năng đã dùng được | Chỉ khai báo trong catalog |
-| `user:delete` | Chưa có API thực thi tương ứng; không mô tả như tính năng đã dùng được | Chỉ khai báo trong catalog |
+| `user:read` | Xem tài khoản và membership trong tổ chức; không trả credential | Đã có xử lý backend |
+| `user:create` | Tạo user/membership bằng mật khẩu write-only; không tự gán role | Đã có xử lý backend |
+| `user:update` | Sửa tên nếu identity không dùng chung tenant, đổi trạng thái membership; không tự sửa mình | Đã có xử lý backend |
+| `user:delete` | Gỡ membership và role của tenant; giữ global identity và tenant khác | Đã có xử lý backend |
 
 ### Vai trò
 
 | Quyền | Cho phép làm gì | Trạng thái |
 | --- | --- | --- |
 | `role:read` | Xem danh mục vai trò và danh sách thành viên trong tổ chức | Đã có xử lý backend |
-| `role:create` | Chưa có API thực thi tương ứng; không mô tả như tính năng đã dùng được | Chỉ khai báo trong catalog |
-| `role:update` | Chưa có API thực thi tương ứng; không mô tả như tính năng đã dùng được | Chỉ khai báo trong catalog |
-| `role:delete` | Chưa có API thực thi tương ứng; không mô tả như tính năng đã dùng được | Chỉ khai báo trong catalog |
+| `role:create` | Tạo role tenant; thêm quyền cần role:assign và trần quyền của actor | Đã có xử lý backend |
+| `role:update` | Sửa role chưa gán cho chính mình; không vô hiệu hóa role đang dùng | Đã có xử lý backend |
+| `role:delete` | Xóa role chưa được gán; role đang dùng bị 409 | Đã có xử lý backend |
 | `role:assign` | Gán/gỡ vai trò ACTIVE hiện có cho thành viên theo các ràng buộc trạng thái; không tạo vai trò mới | Đã có xử lý backend |
 
 ### Nghỉ phép
@@ -251,6 +251,6 @@ Tên vai trò là nhãn do tổ chức quản lý; không tự sinh/gán những
 | Nhân sự | employee/department, ca/phân ca/nghỉ phép và hồ sơ theo chức trách; nhạy cảm phải cấp riêng. |
 | Kế toán | compensation/payroll/report theo bước tạo, tính, duyệt, chốt được giao; không cần cấp role:assign để làm bảng lương. |
 | Người kiểm tra | Các quyền read/report/audit cần thiết; không thêm create/update/delete nếu chỉ kiểm tra. |
-| Quản trị quyền | role:read để xem và role:assign để gán/gỡ vai trò hiện có; không suy ra CRUD vai trò từ những key chưa có API. |
+| Quản trị quyền | role:read để xem và role:assign để gán/gỡ vai trò hiện có; CRUD role cần role:create/update/delete tương ứng, không tự có từ role:assign. |
 
 Không có lời hứa mọi vai trò mang các tên trên đều có sẵn hoặc đã được cấu hình trong database đang chạy.
