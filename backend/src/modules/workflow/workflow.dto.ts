@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { WORKFLOW_STATUS } from './workflow.types';
 
@@ -37,6 +37,7 @@ export class CreateWorkflowInstanceDto {
   entityId?: string;
 
   @IsOptional()
+  @IsObject()
   data?: Record<string, unknown>;
 }
 
@@ -47,6 +48,7 @@ export class ConfirmWorkflowStepDto {
   comments?: string;
 
   @IsOptional()
+  @IsObject()
   resultPayload?: Record<string, unknown>;
 }
 

@@ -74,6 +74,8 @@ function compose(tool: string, data: Json): string {
   if (data.status !== 'OK' && data.status !== 'EMPTY') return 'Tạm thời chưa tra cứu được dữ liệu này.';
   const empty = data.status === 'EMPTY';
   switch (tool) {
+    case 'search_knowledge':
+      return empty ? 'Chưa tìm thấy trích đoạn PDF phù hợp trong kho tri thức.' : 'Trích đoạn PDF (chế độ mô phỏng, không dùng model):\n' + lines(data.items, d => `${String(d.filename)}, trang ${String(d.page)}: ${String(d.excerpt)}`);
     case 'list_departments':
       return empty ? 'Tổ chức chưa có phòng ban nào.' : `Tổ chức có ${String(data.total)} phòng ban:\n` + lines(data.items, (d) =>
         `${String(d.name)}${d.activeEmployees !== null && d.activeEmployees !== undefined ? ` — ${String(d.activeEmployees)} nhân viên` : ''}`
@@ -149,6 +151,10 @@ export class MockAiProvider extends AiToolCallingProvider {
   /** Legacy single-call contract, kept for direct callers: a short deterministic text capped by maxOutputTokens. */
   async generateText(input: AiProviderInput, context: AiProviderContext): Promise<AiProviderResult> {
     if (context.signal.aborted) throw new AiProviderUnavailable();
+    if (input.systemPrompt?.startsWith('DXOS_TASK_DRAFT_V1.')) {
+      const text = JSON.stringify({ title: input.messages.at(-1)?.content.trim().slice(0, 200) || 'Công việc mẫu', priority: 'MEDIUM' });
+      return { text, finishReason: 'stop', usage: { inputTokens: 1, outputTokens: Math.min(input.maxOutputTokens, tokens(text)) } };
+    }
     const outputTokens = Math.min(input.maxOutputTokens, 4);
     return {
       text: 'mock'.repeat(outputTokens),
@@ -184,6 +190,10 @@ export class MockAiProvider extends AiToolCallingProvider {
       const system = input.messages.find((m) => m.role === 'system')?.content ?? '';
       const line = /^Người đang hỏi: (.+)$/m.exec(system)?.[1];
       return answer(line ? 'Bạn là ' + line.replace(/"/g, '') : 'Trợ lý không có thông tin về tài khoản của bạn.');
+    }
+    if (/tra cuu pdf|tai lieu pdf|kho tri thuc/.test(question)) {
+      if (!input.tools?.some(t => t.name === 'search_knowledge')) return answer(NO_PERMISSION);
+      return { text: '', toolCalls: [{id:'mock_search_knowledge',name:'search_knowledge',arguments:JSON.stringify({query:(last?.content ?? '').slice(0,200)})}],finishReason:'tool_calls',usage:{inputTokens,outputTokens:0} };
     }
     const intent = INTENTS.find((rule) => rule.test.test(question));
     if (!intent) return answer(HELP);

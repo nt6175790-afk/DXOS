@@ -9,11 +9,13 @@ import { OrganizationPermissionGuard } from './guards/organization-permission.gu
 import { PermissionsController } from './permissions.controller';
 import { RoleAdministrationController } from './role-administration.controller';
 import { RoleAdministrationService } from './role-administration.service';
+import { OrganizationAccountsController } from './organization-accounts.controller';
+import { OrganizationAccountsService } from './organization-accounts.service';
 
 @Module({
   imports: [AuditWriterModule, AuthModule],
-  controllers: [PermissionsController, RoleAdministrationController],
-  providers: [AuthorizationService, OrganizationPermissionGuard, RbacAssignmentService, RoleAdministrationService],
+  controllers: [PermissionsController, RoleAdministrationController, OrganizationAccountsController],
+  providers: [AuthorizationService, OrganizationPermissionGuard, RbacAssignmentService, RoleAdministrationService, OrganizationAccountsService],
   exports: [AuthorizationService, OrganizationPermissionGuard, RbacAssignmentService, RoleAdministrationService, AuditWriterModule],
 })
 export class RbacModule {}

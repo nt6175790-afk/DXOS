@@ -8,11 +8,14 @@ import { AuditModule } from '../audit/audit.module';
 import { NotificationModule } from '../notifications/notification.module';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
+import { WorkModule } from '../work/work.module';
+import { DocumentsModule } from '../documents/documents.module';
+import { WorkflowActionsService } from './workflow-actions.service';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, RbacModule, AuditModule, NotificationModule],
+  imports: [DatabaseModule, AuthModule, RbacModule, AuditModule, NotificationModule, WorkModule, DocumentsModule],
   controllers: [WorkflowController],
-  providers: [WorkflowService],
+  providers: [WorkflowService, WorkflowActionsService],
   exports: [WorkflowService],
 })
 export class WorkflowModule {}

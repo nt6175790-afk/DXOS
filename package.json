@@ -1,11 +1,11 @@
 {
   "name": "dx-os",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "DX-OS — Digital Enterprise Operating System",
   "packageManager": "npm@10.9.4",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=22.21.1",
     "npm": ">=10.0.0"
   },
   "workspaces": [
@@ -19,6 +19,7 @@
     }
   },
   "scripts": {
+    "security:resume": "node backend/scripts/resume-local-security.js",
     "demo:init": "node backend/scripts/init-demo-env.js",
     "demo:build": "docker compose --env-file .secrets/demo/compose.env -f backend/deploy/compose.demo.yml build",
     "demo:up": "docker compose --env-file .secrets/demo/compose.env -f backend/deploy/compose.demo.yml up -d --wait --wait-timeout 240",

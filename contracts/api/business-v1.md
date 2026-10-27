@@ -34,3 +34,7 @@ Required implementation tests: tenant A/B route/resource/reference/cursor tamper
 ## Permission review — 22/10/2026
 
 Automation execution discovery requires automation:read; manual scanning requires automation:manage, with JWT and ACTIVE organization membership. Background system scans use a separate trusted service entry point. HR document owner access also requires ACTIVE membership. SENSITIVE filters remain owner-scoped without document:sensitive:read; generic file metadata/content/catalog, search and task attachment references retain the sensitivity boundary. Updating or downgrading another employee's sensitive document also requires sensitive access. Response shapes and schema are unchanged; no extra permissions are granted. See docs/architecture/permission-reference.md for the complete catalog and controller/service intersections.
+
+## Mở rộng nghiệp vụ V1
+
+Quản trị identity/membership và role CRUD xem [permission provisioning](permission-provisioning.md); không thay đổi quyền mặc định. Workflow có handler giao dịch thật và retry xem [workflow](workflow.md). AI có bản nháp task phải xác nhận và lexical PDF RAG với nguồn/trang xem [AI](ai.md). Ba bảng mới chỉ lưu bản nháp/nguồn dẫn xuất/chunk, không tạo hệ thống role, file hoặc task thứ hai.

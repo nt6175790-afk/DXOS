@@ -119,6 +119,7 @@ export class FilesService {
       const row = await tx.fileObject.findFirst({ where: { id, organizationId: org, ...await fileVisibility(this.authorization, tx, user, org), status: { in: ['AVAILABLE', 'DELETED'] } } });
       if (!row) throw new ForbiddenException();
       if (row.status === 'AVAILABLE') {
+        await tx.aiKnowledgeDocument.deleteMany({ where: { organizationId: org, fileId: id } });
         await tx.fileObject.update({ where: { id }, data: { status: 'DELETED' } });
         await this.audit.record({ event: AUDIT_EVENTS.FILE_DELETED, organizationId: org, actorUserId: user, resourceId: id }, tx);
       }

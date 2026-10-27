@@ -324,4 +324,19 @@ Xem [kết quả kiểm chứng local](docs/architecture/validation-status.md), 
 
 ## Hướng dẫn phân quyền
 
-Xem [chức năng của toàn bộ 91 quyền và giới hạn nghiệp vụ](docs/architecture/permission-reference.md). Quyền áp dụng riêng từng tổ chức; tên vai trò không tự cấp quyền. Bảy key user/role CRUD hiện chỉ khai báo trong catalog, chưa phải API chức năng.
+Xem [chức năng của toàn bộ 91 quyền và giới hạn nghiệp vụ](docs/architecture/permission-reference.md). Quyền áp dụng riêng từng tổ chức; tên vai trò không tự cấp quyền. Bảy key user/role CRUD có API quản trị theo tenant; không tự cấp thêm quyền cho tài khoản demo. Xem hợp đồng permission-provisioning và giới hạn tránh tự nâng quyền.
+
+## Các phần nghiệp vụ mở rộng
+
+Xem [ghi chú v0.4.0 và giới hạn đã kiểm tra](docs/release/v0.4.0.md): 1.522 backend tests, 340 frontend tests; quy trình nghiệp vụ và PDF RAG đã thử với Ollama thật.
+
+- **Chấm công:** quản trị viên đặt địa điểm qua ghim Google Maps; máy chủ kiểm tra khoảng cách 100 m và ca làm. Local đã đặt cơ sở 1 Đại học Công nghiệp Hà Nội, 298 Cầu Diễn. Máy mới phải cấu hình địa điểm/ca phù hợp; tọa độ GPS trình duyệt có thể bị giả mạo, không phải bằng chứng chống gian lận tuyệt đối.
+- **Quản trị tài khoản/vai trò:** Cài đặt → Tài khoản & vai trò. Dùng permission user/role tương ứng; tạo tài khoản không tự cấp role. Không reset mật khẩu toàn cục, không chỉnh danh tính dùng chung tenant, không tự sửa role để nâng quyền. Hợp đồng: [permission provisioning](contracts/api/permission-provisioning.md).
+- **Workflow:** chọn hồ sơ/ngày gia hạn hoặc mô tả việc, duyệt bước người dùng rồi handler thực hiện thay đổi thật qua service hiện có. Tác động/step/audit commit nguyên tử; lỗi hiện FAILED và có retry. Xem [workflow](contracts/api/workflow.md).
+- **AI:** nút **Tạo việc bằng AI** tạo bản nháp; sửa/kiểm tra và **Xác nhận tạo công việc** mới ghi task. Nút **Kho tri thức PDF** cho phép chọn PDF đã tải lên và đồng ý chia sẻ trích đoạn. Sau đó hỏi “Tra cứu PDF …” trong chat để nhận nguồn/trang. Chỉ hỗ trợ PDF có text ≤5 MB / 30 trang, không OCR, không index hồ sơ nhân sự. Đây là lexical RAG có giới hạn, không phải tìm kiếm vector. Khi dùng Ollama Cloud, trích đoạn được gửi tới dịch vụ cloud. Xem [AI](contracts/api/ai.md).
+
+### Khởi động lại security stack local đã cài
+
+Mở Docker Desktop và chờ engine hoạt động, rồi chạy `npm run security:resume` từ checkout đã có `.secrets` và stack `dxos-security`. Script dùng CA/khóa unseal đã tồn tại trong local, không khởi tạo Vault mới, không thay chính sách hay cấp quyền. Nếu mất khóa bootstrap, khôi phục từ bản sao riêng; không tạo key giả và không commit `.secrets`. Chạy `node backend/scripts/test-edge-live.js` để kiểm tra edge/SSO. Email/password vẫn là đường đăng nhập độc lập.
+
+Các phần này không thay thế yêu cầu triển khai production: Keycloak dev/H2, seal custody cùng máy, TLS/domain/backup production vẫn phải cấu hình riêng. Báo cáo học thuật/slide không thuộc đợt hoàn thiện kỹ thuật này.
