@@ -45,7 +45,7 @@ jobs:
       - name: Rebuild patched source, test, scan and package matching source
         run: bash backend/scripts/build-adguard-remediation.sh
       - name: Upload verified candidate together with source and notices
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: adguard-v0.107.79-dxos.1-linux-amd64-with-source
           path: security-artifacts/adguard-remediation/output/published/
@@ -53,7 +53,7 @@ jobs:
           retention-days: 14
       - name: Diagnostic reports on failure (no source credentials or service logs)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: adguard-remediation-incomplete-reports
           path: |
