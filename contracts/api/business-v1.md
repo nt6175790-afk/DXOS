@@ -38,3 +38,9 @@ Automation execution discovery requires automation:read; manual scanning require
 ## Mở rộng nghiệp vụ V1
 
 Quản trị identity/membership và role CRUD xem [permission provisioning](permission-provisioning.md); không thay đổi quyền mặc định. Workflow có handler giao dịch thật và retry xem [workflow](workflow.md). AI có bản nháp task phải xác nhận và lexical PDF RAG với nguồn/trang xem [AI](ai.md). Ba bảng mới chỉ lưu bản nháp/nguồn dẫn xuất/chunk, không tạo hệ thống role, file hoặc task thứ hai.
+
+## Final review corrections — 28/10/2026
+
+Approval list/detail/summary require `approval:read` and the existing ACTIVE tenant context. Existing own-request versus organization-operator scope remains in force. PAYROLL requests additionally require `payroll:read`; otherwise they are absent from list/count/AI results, detail is 403, and a hidden/foreign/out-of-filter cursor is 400 without record details. A missing same-tenant detail remains 404. Mutation permission semantics and role grants are unchanged.
+
+Attendance list preserves descending workDate/id ordering, default limit 25 (1–100), and `{items,nextCursor}`. The cursor is the last returned item, not the look-ahead row, and must belong to the current tenant/employee/filter scope. Date-only filters require real Gregorian YYYY-MM-DD dates; invalid dates, reversed ranges, malformed limits and summary months outside 01–12 return 400. Summary `from`/`to` must be supplied together. Summary `totalWorkDays` remains the number of recorded attendance days; the UI labels it “Ngày đã ghi nhận”, not standard working days. No migration or data rewrite.

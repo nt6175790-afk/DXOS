@@ -120,7 +120,7 @@ services:
     image: dxos-security-waf-oss
     build: { context: ../.., dockerfile: backend/deploy/waf.Dockerfile }
     ports: ["127.0.0.1:8088:8080"]
-    volumes: ["./waf/Caddyfile:/config/caddy/Caddyfile:ro"]
+    volumes: ["./waf/coraza.conf:/config/coraza.conf:ro"]
     networks: [edge]
     depends_on: [apisix, frontend]
     restart: unless-stopped

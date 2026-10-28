@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
+import { AttendanceStatus } from '@prisma/client';
 const coordinates = {
   latitude: { type: 'number', minimum: -90, maximum: 90 },
   longitude: { type: 'number', minimum: -180, maximum: 180 },
@@ -23,7 +24,22 @@ const parameters = [{ in: 'path', name: 'organizationId', required: true, schema
 const policyResponse = { description: 'Organization location policy. office is null until configured.', content: { 'application/json': { schema: { $ref: '#/components/schemas/AttendanceLocationPolicy' } } } };
 const errors = { '400': { description: 'Invalid payload / location sample / schedule rule' }, '401': { description: 'Authentication required' }, '403': { description: 'Inactive/foreign membership, insufficient permission, or outside 100 m including GPS accuracy' }, '409': { description: 'Office location not configured or existing attendance conflict' } };
 const base = { tags: ['Attendance'], security: [{ bearerAuth: [] }], parameters };
+const dateQuery = (name: string) => ({ in: 'query', name, schema: { type: 'string', format: 'date' }, description: 'Real Gregorian YYYY-MM-DD date; impossible dates return 400.' });
 export const attendancePaths = {
+  '/organizations/{organizationId}/attendance': { get: { ...base,
+    summary: 'List visible attendance; requires attendance:read and ACTIVE membership',
+    description: 'Own employee unless attendance:manage permits organization scope. Order workDate DESC, id DESC. Cursor is the last returned item and must remain visible under the same employee/date/status filters. Invalid/reversed dates or hidden cursors return 400.',
+    parameters: [...parameters, { in: 'query', name: 'employeeId', schema: { type: 'string', format: 'uuid' } },
+      ...['workDate', 'from', 'to'].map(dateQuery), { in: 'query', name: 'status', schema: { type: 'string', enum: Object.values(AttendanceStatus) } },
+      { in: 'query', name: 'limit', schema: { type: 'integer', default: 25, minimum: 1, maximum: 100 } }, { in: 'query', name: 'after', schema: { type: 'string', format: 'uuid' } }],
+    responses: { '200': { description: '{items,nextCursor}; existing attendance projection unchanged, no employee GPS persisted or returned' }, ...errors },
+  } },
+  '/organizations/{organizationId}/attendance/summary': { get: { ...base,
+    summary: 'Read attendance summary; requires attendance:read and ACTIVE membership',
+    description: 'Same own-employee/attendance:manage scope as list. totalWorkDays counts recorded attendance days, not a standard working-day calendar. from/to override month and must be supplied together in ascending order. Invalid dates/month/range return 400.',
+    parameters: [...parameters, { in: 'query', name: 'employeeId', schema: { type: 'string', format: 'uuid' } }, { in: 'query', name: 'month', schema: { type: 'string', pattern: '^[1-9]\\d{3}-(0[1-9]|1[0-2])$' } }, ...['from', 'to'].map(dateQuery)],
+    responses: { '200': { description: 'Existing attendance summary fields unchanged' }, ...errors },
+  } },
   '/organizations/{organizationId}/attendance/location': {
     get: { ...base, summary: 'Read office location; requires attendance:read and ACTIVE membership', responses: { '200': policyResponse, ...errors } },
     put: { ...base, summary: 'Set office coordinates; requires attendance:manage and ACTIVE membership. Records audit without GPS metadata.', requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/AttendanceOfficeInput' } } } }, responses: { '200': policyResponse, ...errors } },

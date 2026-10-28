@@ -758,25 +758,25 @@ export class ApprovalService {
     });
   }
 
+  private async readScope(tx: Prisma.TransactionClient, actor: string, org: string, mine = false): Promise<Prisma.ApprovalRequestWhereInput> {
+    const canReadOthers = !mine && (
+      await this.authorization.can(actor, PERMISSIONS.APPROVAL_APPROVE, org, tx) ||
+      await this.authorization.can(actor, PERMISSIONS.APPROVAL_MANAGE, org, tx) ||
+      await this.authorization.can(actor, PERMISSIONS.LEAVE_APPROVE, org, tx) ||
+      await this.authorization.can(actor, PERMISSIONS.ATTENDANCE_MANAGE, org, tx));
+    const payrollRead = await this.authorization.can(actor, PERMISSIONS.PAYROLL_READ, org, tx);
+    return { organizationId: org,
+      ...(!canReadOthers ? { requester: { userId: actor } } : {}),
+      ...(!payrollRead ? { NOT: { type: ApprovalRequestType.PAYROLL } } : {}) };
+  }
+
   async list(actorUserId: string, organizationId: string, query: ListApprovalsQueryDto) {
     return this.transaction(actorUserId, organizationId, [PERMISSIONS.APPROVAL_READ], async (tx) => {
       // Auto backfill any leave requests that don't have an ApprovalRequest yet
       await this.backfillLeaveRequests(tx, organizationId);
 
-      const canApprove =
-        (await this.authorization.can(actorUserId, PERMISSIONS.APPROVAL_APPROVE, organizationId, tx)) ||
-        (await this.authorization.can(actorUserId, PERMISSIONS.APPROVAL_MANAGE, organizationId, tx)) ||
-        (await this.authorization.can(actorUserId, PERMISSIONS.LEAVE_APPROVE, organizationId, tx)) ||
-        (await this.authorization.can(actorUserId, PERMISSIONS.ATTENDANCE_MANAGE, organizationId, tx));
-
-      const isMine = query.mine === true || !canApprove;
-
-      let requesterFilter: Prisma.ApprovalRequestWhereInput = {};
-      if (isMine) {
-        requesterFilter = { requester: { userId: actorUserId } };
-      } else if (query.requesterId) {
-        requesterFilter = { requesterId: query.requesterId };
-      }
+      const scope = await this.readScope(tx, actorUserId, organizationId, query.mine === true);
+      const requesterFilter: Prisma.ApprovalRequestWhereInput = query.requesterId ? { requesterId: query.requesterId } : {};
 
       let statusFilter: Prisma.ApprovalRequestWhereInput = {};
       if (query.pending === true) {
@@ -785,9 +785,11 @@ export class ApprovalService {
         statusFilter = { status: query.status };
       }
 
+      const where: Prisma.ApprovalRequestWhereInput = { ...scope, ...requesterFilter, ...statusFilter,
+        ...(query.type ? { type: query.type } : {}) };
       const cursor = query.after
         ? await tx.approvalRequest.findFirst({
-            where: { organizationId, id: query.after },
+            where: { ...where, id: query.after },
             select: { id: true, createdAt: true },
           })
         : null;
@@ -798,10 +800,7 @@ export class ApprovalService {
 
       const rows = await tx.approvalRequest.findMany({
         where: {
-          organizationId,
-          ...requesterFilter,
-          ...statusFilter,
-          ...(query.type ? { type: query.type } : {}),
+          ...where,
           ...(cursor
             ? {
                 OR: [
@@ -859,12 +858,15 @@ export class ApprovalService {
     return this.transaction(actorUserId, organizationId, [PERMISSIONS.APPROVAL_READ], async (tx) => {
       const approval = await tx.approvalRequest.findUnique({
         where: { organizationId_id: { organizationId, id: approvalId } },
-        select: approvalProjection,
+        select: { type: true, requester: { select: { userId: true } } },
       });
 
       if (!approval) {
         throw new NotFoundException('Approval request not found');
       }
+
+      if (approval.type === ApprovalRequestType.PAYROLL &&
+        !await this.authorization.can(actorUserId, PERMISSIONS.PAYROLL_READ, organizationId, tx)) throw new ForbiddenException();
 
       const canApprove =
         (await this.authorization.can(actorUserId, PERMISSIONS.APPROVAL_APPROVE, organizationId, tx)) ||
@@ -876,7 +878,7 @@ export class ApprovalService {
         throw new ForbiddenException();
       }
 
-      return approval;
+      return tx.approvalRequest.findUniqueOrThrow({ where: { organizationId_id: { organizationId, id: approvalId } }, select: approvalProjection });
     });
   }
 
@@ -884,19 +886,20 @@ export class ApprovalService {
     return this.transaction(actorUserId, organizationId, [PERMISSIONS.APPROVAL_READ], async (tx) => {
       await this.backfillLeaveRequests(tx, organizationId);
 
+      const scope = await this.readScope(tx, actorUserId, organizationId);
       const [pendingCount, approvedCount, rejectedCount, myPendingCount] = await Promise.all([
         tx.approvalRequest.count({
-          where: { organizationId, status: ApprovalStatus.PENDING },
+          where: { ...scope, status: ApprovalStatus.PENDING },
         }),
         tx.approvalRequest.count({
-          where: { organizationId, status: ApprovalStatus.APPROVED },
+          where: { ...scope, status: ApprovalStatus.APPROVED },
         }),
         tx.approvalRequest.count({
-          where: { organizationId, status: ApprovalStatus.REJECTED },
+          where: { ...scope, status: ApprovalStatus.REJECTED },
         }),
         tx.approvalRequest.count({
           where: {
-            organizationId,
+            ...scope,
             status: ApprovalStatus.PENDING,
             requester: { userId: actorUserId },
           },

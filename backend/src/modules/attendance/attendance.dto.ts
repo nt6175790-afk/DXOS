@@ -60,15 +60,15 @@ export class ListAttendanceDto {
   employeeId?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'workDate must be in YYYY-MM-DD format' })
+  @IsISO8601({ strict: true }) @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'workDate must be in YYYY-MM-DD format' })
   workDate?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'from must be in YYYY-MM-DD format' })
+  @IsISO8601({ strict: true }) @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'from must be in YYYY-MM-DD format' })
   from?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to must be in YYYY-MM-DD format' })
+  @IsISO8601({ strict: true }) @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to must be in YYYY-MM-DD format' })
   to?: string;
 
   @IsOptional()
@@ -76,7 +76,7 @@ export class ListAttendanceDto {
   status?: AttendanceStatus;
 
   @IsOptional()
-  @Transform(({ value }) => (value !== undefined ? parseInt(String(value), 10) : 25))
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -93,14 +93,14 @@ export class AttendanceSummaryDto {
   employeeId?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}$/, { message: 'month must be in YYYY-MM format' })
+  @Matches(/^[1-9]\d{3}-(?:0[1-9]|1[0-2])$/, { message: 'month must be in YYYY-MM format with a valid month' })
   month?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'from must be in YYYY-MM-DD format' })
+  @IsISO8601({ strict: true }) @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'from must be in YYYY-MM-DD format' })
   from?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to must be in YYYY-MM-DD format' })
+  @IsISO8601({ strict: true }) @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to must be in YYYY-MM-DD format' })
   to?: string;
 }

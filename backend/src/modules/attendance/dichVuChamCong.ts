@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
 import {
+  BadRequestException,
   ForbiddenException,
   HttpStatus,
   Injectable,
@@ -14,6 +15,7 @@ import { AuditService } from '../audit/audit.service';
 import { AUDIT_EVENTS } from '../audit/audit-catalog';
 import type { AttendanceSummaryDto, CheckInDto, CheckOutDto, ListAttendanceDto } from './attendance.dto';
 import { AttendanceLocationService } from './attendance-location.service';
+import { attendanceRange, parseAttendanceDate } from './attendance-date';
 
 export const attendanceProjection = {
   id: true,
@@ -687,6 +689,8 @@ export class AttendanceService {
     actorUserId: string,
     dto: ListAttendanceDto,
   ): Promise<{ items: AttendanceRecordResponse[]; nextCursor: string | null }> {
+    const range = attendanceRange(dto.from, dto.to);
+    if (dto.workDate) parseAttendanceDate(dto.workDate);
     const callerEmployee = await this.prisma.employee.findUnique({
       where: {
         organizationId_userId: {
@@ -718,23 +722,12 @@ export class AttendanceService {
       where.status = dto.status;
     }
 
-    if (dto.workDate) {
-      const parts = dto.workDate.split('-').map(Number);
-      where.workDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-    } else if (dto.from || dto.to) {
-      where.workDate = {};
-      if (dto.from) {
-        const parts = dto.from.split('-').map(Number);
-        where.workDate.gte = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-      }
-      if (dto.to) {
-        const parts = dto.to.split('-').map(Number);
-        where.workDate.lte = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-      }
-    }
+    if (dto.workDate) where.workDate = parseAttendanceDate(dto.workDate);
+    else if (range.start || range.end) where.workDate = { ...(range.start ? { gte: range.start } : {}), ...(range.end ? { lte: range.end } : {}) };
+    if (dto.after && !await this.prisma.attendanceRecord.findFirst({ where: { ...where, id: dto.after }, select: { id: true } })) throw new BadRequestException('Invalid cursor');
 
     const take = dto.limit ?? 25;
-    const items = await this.prisma.attendanceRecord.findMany({
+    const rows = await this.prisma.attendanceRecord.findMany({
       where,
       take: take + 1,
       ...(dto.after
@@ -752,13 +745,8 @@ export class AttendanceService {
       select: attendanceProjection,
     });
 
-    let nextCursor: string | null = null;
-    if (items.length > take) {
-      const nextItem = items.pop();
-      nextCursor = nextItem ? nextItem.id : null;
-    }
-
-    return { items, nextCursor };
+    const items = rows.slice(0, take);
+    return { items, nextCursor: rows.length > take ? items[items.length - 1].id : null };
   }
 
   async getSummary(
@@ -766,6 +754,9 @@ export class AttendanceService {
     actorUserId: string,
     dto: AttendanceSummaryDto,
   ) {
+    if ((dto.from === undefined) !== (dto.to === undefined)) throw new BadRequestException('from and to must be provided together');
+    const range = attendanceRange(dto.from, dto.to);
+    if (dto.month && !/^[1-9]\d{3}-(?:0[1-9]|1[0-2])$/.test(dto.month)) throw new BadRequestException('Invalid month');
     const callerEmployee = await this.prisma.employee.findUnique({
       where: {
         organizationId_userId: {
@@ -798,10 +789,8 @@ export class AttendanceService {
     let endDate: Date;
 
     if (dto.from && dto.to) {
-      const fromParts = dto.from.split('-').map(Number);
-      const toParts = dto.to.split('-').map(Number);
-      startDate = new Date(Date.UTC(fromParts[0], fromParts[1] - 1, fromParts[2]));
-      endDate = new Date(Date.UTC(toParts[0], toParts[1] - 1, toParts[2], 23, 59, 59, 999));
+      startDate = range.start!;
+      endDate = new Date(range.end!.getTime() + 86400000 - 1);
     } else if (dto.month) {
       const [y, m] = dto.month.split('-').map(Number);
       startDate = new Date(Date.UTC(y, m - 1, 1));

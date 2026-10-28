@@ -38,6 +38,7 @@ jobs:
       - run: node backend/scripts/check-source-licenses.js
       - run: node --test backend/scripts/source-publication-policy.test.js
       - run: node --test backend/scripts/init-demo-env.test.js
+      - run: node --test backend/scripts/runtime-image-identity.test.js
       - run: node --test backend/scripts/check-adguard-artifact.test.js
       - run: npm run db:generate && npm run db:validate
       - run: npm run lint:backend

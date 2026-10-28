@@ -20,6 +20,7 @@ import { dashboardPaths, dashboardSchemas } from '../dashboard/dashboard.openapi
 import { searchPaths, searchSchemas } from '../search/search.openapi';
 import { calendarPaths, calendarSchemas } from '../calendar/calendar.openapi';
 import { ssoPaths } from '../auth/sso.openapi';
+import { approvalReadPaths } from '../approval/approval.openapi';
 import { attendancePaths, attendanceSchemas } from '../attendance/attendance.openapi';
 import { workflowPaths, workflowSchemas } from '../workflow/workflow.openapi';
 
@@ -46,6 +47,7 @@ export class ApiDocumentationController {
       paths: {
         ...workflowPaths,
         ...attendancePaths,
+        ...approvalReadPaths,
         ...ssoPaths,
         ...reportPaths,
         ...organizationPaths,

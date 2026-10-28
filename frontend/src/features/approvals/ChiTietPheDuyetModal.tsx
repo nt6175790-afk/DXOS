@@ -151,7 +151,7 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
                 approval.type === 'LEAVE'
                   ? 'bg-purple-100 text-purple-700'
                   : approval.type === 'PAYROLL'
-                  ? 'bg-emerald-100 text-emerald-700'
+                  ? 'bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 text-emerald-700'
                   : 'bg-blue-100 text-blue-700'
               }`}>
                 {approval.type === 'LEAVE'
@@ -162,7 +162,7 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
               </span>
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                 approval.status === 'APPROVED'
-                  ? 'bg-emerald-100 text-emerald-700'
+                  ? 'bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 text-emerald-700'
                   : approval.status === 'REJECTED'
                   ? 'bg-rose-100 text-rose-700'
                   : approval.status === 'CANCELLED'
@@ -317,7 +317,7 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
                       </div>
                       <div>
                         <span className="text-slate-500">Tổng Net:</span>{' '}
-                        <span className="font-bold text-emerald-600">
+                        <span className="font-bold text-emerald-600 dark:text-emerald-300">
                           {Number(p.totalNet || 0).toLocaleString('vi-VN')} đ
                         </span>
                       </div>
@@ -366,15 +366,15 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
 
           {/* Action Modes Forms */}
           {mode === 'approve' && (
-            <div className="p-4 border-2 border-emerald-300 bg-emerald-50 rounded-lg space-y-3">
-              <h4 className="font-semibold text-emerald-900 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Xác nhận phê duyệt yêu cầu
+            <div className="p-4 border-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg space-y-3">
+              <h4 className="font-semibold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-300" /> Xác nhận phê duyệt yêu cầu
               </h4>
-              <p className="text-xs text-emerald-700">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">
                 Khi phê duyệt, dữ liệu công chấm công hoặc lịch nghỉ phép sẽ tự động cập nhật.
               </p>
               <div>
-                <label className="block text-xs font-medium text-emerald-800 mb-1">
+                <label className="block text-xs font-medium text-emerald-800 dark:text-emerald-300 mb-1">
                   Ghi chú cho nhân viên (tùy chọn)
                 </label>
                 <input
@@ -382,14 +382,14 @@ export function ApprovalDetailModal({ isOpen, approval, canApprove, onClose, onS
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Đồng ý điều chỉnh..."
-                  className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 bg-white border border-emerald-300 dark:border-emerald-800 rounded-lg text-sm"
                 />
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setMode('view')}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-emerald-100 rounded-lg"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg"
                 >
                   Quay lại
                 </button>

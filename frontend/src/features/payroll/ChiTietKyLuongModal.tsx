@@ -160,7 +160,7 @@ export function PayrollPeriodDetailModal({
                   currentPeriod.status === 'FINALIZED'
                     ? 'bg-slate-900 text-white'
                     : currentPeriod.status === 'APPROVED'
-                    ? 'bg-emerald-100 text-emerald-700'
+                    ? 'bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 text-emerald-700'
                     : currentPeriod.status === 'PENDING_APPROVAL'
                     ? 'bg-amber-100 text-amber-700'
                     : currentPeriod.status === 'CALCULATED'
@@ -194,7 +194,7 @@ export function PayrollPeriodDetailModal({
             </div>
           )}
           {successMsg && (
-            <div className="mx-6 mt-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm flex items-center gap-2">
+            <div className="mx-6 mt-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-emerald-700 text-sm flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{successMsg}</span>
             </div>
@@ -210,9 +210,9 @@ export function PayrollPeriodDetailModal({
               <span className="text-xs text-slate-500 font-medium">Tổng thu nhập Gross</span>
               <p className="text-xl font-bold text-slate-900 mt-1">{formatMoney(currentPeriod.totalGross)}</p>
             </div>
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-100">
-              <span className="text-xs text-emerald-700 font-medium">Tổng thực nhận Net</span>
-              <p className="text-xl font-bold text-emerald-700 mt-1">{formatMoney(currentPeriod.totalNet)}</p>
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800">
+              <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Tổng thực nhận Net</span>
+              <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{formatMoney(currentPeriod.totalNet)}</p>
             </div>
             <div className="flex flex-col justify-center gap-2">
               {/* Contextual Actions */}
@@ -301,7 +301,7 @@ export function PayrollPeriodDetailModal({
                         <td className="py-3 px-3 text-center font-medium text-slate-700">
                           {Number(r.workingDays).toFixed(1)}
                         </td>
-                        <td className="py-3 px-3 text-center font-semibold text-emerald-700">
+                        <td className="py-3 px-3 text-center font-semibold text-emerald-700 dark:text-emerald-300">
                           {Number(r.workedDays).toFixed(1)}
                         </td>
                         <td className="py-3 px-3 text-center text-xs">
@@ -310,7 +310,7 @@ export function PayrollPeriodDetailModal({
                             <span className="text-amber-700 block">{Number(r.unpaidLeaveDays).toFixed(1)} không lương</span>
                           )}
                         </td>
-                        <td className="py-3 px-3 text-right font-bold text-emerald-700">
+                        <td className="py-3 px-3 text-right font-bold text-emerald-700 dark:text-emerald-300">
                           {formatMoney(r.netAmount)}
                         </td>
                         <td className="py-3 px-3 text-right">

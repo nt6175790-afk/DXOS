@@ -171,9 +171,9 @@ export function ApprovalsPage() {
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đã phê duyệt</p>
-            <h3 className="text-2xl font-bold text-emerald-600 mt-1">{summary.approvedCount}</h3>
+            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-300 mt-1">{summary.approvedCount}</h3>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center text-emerald-600">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
@@ -352,7 +352,7 @@ export function ApprovalsPage() {
                         item.type === 'LEAVE'
                           ? 'bg-purple-100 text-purple-700'
                           : item.type === 'PAYROLL'
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 text-emerald-700'
                           : 'bg-blue-100 text-blue-700'
                       }`}>
                         {item.type === 'LEAVE'
@@ -375,7 +375,7 @@ export function ApprovalsPage() {
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${
                         item.status === 'APPROVED'
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 text-emerald-700'
                           : item.status === 'REJECTED'
                           ? 'bg-rose-100 text-rose-700'
                           : item.status === 'CANCELLED'

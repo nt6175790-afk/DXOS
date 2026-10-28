@@ -142,7 +142,7 @@ describe('AttendancePage Component & User Flows', () => {
     expect(await screen.findByText('Quản lý Chấm công')).toBeInTheDocument();
     expect(screen.getByText('Chấm công hôm nay')).toBeInTheDocument();
     expect(screen.getByText('Tổng hợp tháng này')).toBeInTheDocument();
-    expect(screen.getByText('Ngày công chuẩn')).toBeInTheDocument();
+    expect(screen.getByText('Ngày đã ghi nhận')).toBeInTheDocument();
     expect(screen.getAllByText('Đúng giờ').length).toBeGreaterThanOrEqual(1);
   });
 
