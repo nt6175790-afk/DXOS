@@ -343,3 +343,5 @@ require (
 replace golang.org/x/net => golang.org/x/net v0.60.0
 
 replace github.com/hashicorp/cap => /deps/cap
+
+replace github.com/okta/okta-sdk-golang/v2 => /deps/okta

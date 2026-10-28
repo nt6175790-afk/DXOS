@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-10-28T14:39:21.208Z",
+  "scope": "Immutable image IDs of the nine actual local DX-OS containers; raw Trivy HIGH/CRITICAL gate, no suppression",
+  "results": [
+    {
+      "service": "backend",
+      "image": "sha256:fef3d0d28d30f4023fbb868717658ef2e18f3d730326b1ad503b60f1fede0ad5",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "frontend",
+      "image": "sha256:8f99dcf346f350ac5079b86a1d7395e332a54c771077ef0f6c710b90230d317f",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "keycloak",
+      "image": "sha256:9ba5b04cd8b9affccf92ee4643c01fcdb1e5af5b5bdb91472f84cf313a591e75",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "openbao",
+      "image": "sha256:42631cf955dd01912e00b300cf5e885f244d24f680d541467e83b24fa6a56166",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "openbao-agent",
+      "image": "sha256:42631cf955dd01912e00b300cf5e885f244d24f680d541467e83b24fa6a56166",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "redis",
+      "image": "sha256:ad7b5e65ac5cb828852ca4e6fdf4a0d5159c0c265c08a28c2774a808e1fdcdc1",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "clamav",
+      "image": "sha256:f5a78febd1bd3d899a910027112091338a44a8aedf94754517a3d79a098ef99e",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "apisix",
+      "image": "sha256:abab26d4a40a43f60cb33728d381d9639fff78caec700ace4ed81c563e01487c",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    },
+    {
+      "service": "waf",
+      "image": "sha256:2677b43c9db5958dd8d3d2f60a01d2914634057888f29cbdf1744ba212fd1439",
+      "status": "PASS",
+      "high": 0,
+      "critical": 0
+    }
+  ]
+}

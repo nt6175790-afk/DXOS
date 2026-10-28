@@ -9,7 +9,10 @@ RUN apk upgrade --no-cache \
 COPY backend/deploy/clamav/clamd.conf /etc/clamav/clamd.conf
 COPY backend/deploy/clamav/freshclam.conf /etc/clamav/freshclam.conf
 COPY backend/deploy/clamav/start.sh /usr/local/bin/start-clamav
-RUN chmod 755 /usr/local/bin/start-clamav && mkdir -p /var/lib/clamav && chown clamav:clamav /var/lib/clamav
+RUN sed -i 's/\r$//' /usr/local/bin/start-clamav /etc/clamav/clamd.conf /etc/clamav/freshclam.conf \
+    && test "$(head -n 1 /usr/local/bin/start-clamav)" = '#!/bin/sh' \
+    && /bin/sh -n /usr/local/bin/start-clamav \
+    && chmod 755 /usr/local/bin/start-clamav && mkdir -p /var/lib/clamav && chown clamav:clamav /var/lib/clamav
 USER clamav
 EXPOSE 3310
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
