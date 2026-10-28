@@ -43,6 +43,8 @@ export function WorkflowsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedInstance, setSelectedInstance] = useState<WorkflowInstance | null>(null);
+  const needsFinalization = selectedInstance?.status === 'RUNNING' &&
+    !!selectedInstance.stepExecutions?.length && selectedInstance.stepExecutions.every(step => step.status === 'COMPLETED');
   const [confirmingStepId, setConfirmingStepId] = useState<string | null>(null);
   const [confirmComments, setConfirmComments] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -448,14 +450,14 @@ export function WorkflowsPage() {
                 </div>
               </div>
 
-              {selectedInstance.status === 'FAILED' && <div role="alert" className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                <p>Bước nghiệp vụ chưa hoàn tất. Kiểm tra quyền và hồ sơ. Nếu đầu vào sai, hủy và tạo quy trình mới; thử lại giữ nguyên nội dung đã xác nhận.</p>
+              {(selectedInstance.status === 'FAILED' || needsFinalization) && <div role="alert" className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                <p>{needsFinalization ? 'Các bước đã thực hiện xong nhưng quy trình chưa ghi nhận hoàn tất. Thử hoàn tất lại sẽ giữ nguyên kết quả, không tạo lại công việc.' : 'Bước nghiệp vụ chưa hoàn tất. Kiểm tra quyền và hồ sơ. Nếu đầu vào sai, hủy và tạo quy trình mới; thử lại giữ nguyên nội dung đã xác nhận.'}</p>
                 {canUpdate && <button disabled={actionLoading} className="rounded-lg border border-red-300 px-3 py-2" onClick={async () => {
                   if (!orgId) return; const target = orgId; setActionLoading(true);
                   try { const updated = await workflowsApi.retry(orgId, selectedInstance.id); if (scope.current !== target) return; await loadData(); if (scope.current === target) setSelectedInstance(updated); }
                   catch { if (scope.current === target) setError('Không thử lại được quy trình. Kiểm tra quyền và trạng thái.'); }
                   finally { if (scope.current === target) setActionLoading(false); }
-                }}>Thử lại bước lỗi</button>}
+                }}>{needsFinalization ? 'Thử hoàn tất lại' : 'Thử lại bước lỗi'}</button>}
               </div>}
               {/* Timeline Steps */}
               <div className="space-y-4">
