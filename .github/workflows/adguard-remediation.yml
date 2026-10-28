@@ -23,7 +23,7 @@ jobs:
       GOTELEMETRY: "off"
       DXOS_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -36,7 +36,7 @@ jobs:
           go-version: "1.26.10"
           cache: false
       - name: Fetch exact released source without credentials
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: AdguardTeam/AdGuardHome
           ref: 05ba17b282da1c4393d6a4ba4db0cf519194a362

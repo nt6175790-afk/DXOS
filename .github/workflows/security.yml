@@ -30,7 +30,7 @@ jobs:
       DATABASE_URL: mysql://root@127.0.0.1:3306/dx_os_ci
       NODE_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "22.21.1", cache: npm, cache-dependency-path: "package-lock.json" }
       - run: npm ci
@@ -76,7 +76,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: >-
           docker run --rm -v "$PWD:/work:ro" -w /work aquasec/trivy:0.76.0
           fs --scanners vuln,misconfig --severity HIGH,CRITICAL --exit-code 1
@@ -108,7 +108,7 @@ jobs:
     name: Build and run from exact source archive
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: "22.21.1" }
       - name: Export only the tested Git revision
