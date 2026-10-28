@@ -130,7 +130,7 @@ export function PayrollPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <DollarSign className="w-7 h-7 text-emerald-600" />
+            <DollarSign className="w-7 h-7 text-emerald-600 dark:text-emerald-300" />
             Quản lý Tiền lương & Đãi ngộ
           </h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -191,10 +191,10 @@ export function PayrollPage() {
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tổng thực nhận Net</p>
-            <h3 className="text-2xl font-bold text-emerald-600 mt-1">{formatMoney(totalNet)}</h3>
-            <span className="text-xs text-emerald-700 font-medium">Thực chi doanh nghiệp</span>
+            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-300 mt-1">{formatMoney(totalNet)}</h3>
+            <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Thực chi doanh nghiệp</span>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center text-emerald-600">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
@@ -288,7 +288,7 @@ export function PayrollPage() {
                         <td className="py-3.5 px-4 text-right font-medium text-slate-800">
                           {formatMoney(p.totalGross)}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-emerald-700">
+                        <td className="py-3.5 px-4 text-right font-bold text-emerald-700 dark:text-emerald-300">
                           {formatMoney(p.totalNet)}
                         </td>
                         <td className="py-3.5 px-4">
@@ -296,7 +296,7 @@ export function PayrollPage() {
                             p.status === 'FINALIZED'
                               ? 'bg-slate-900 text-white'
                               : p.status === 'APPROVED'
-                              ? 'bg-emerald-100 text-emerald-700'
+                              ? 'bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 text-emerald-700'
                               : p.status === 'PENDING_APPROVAL'
                               ? 'bg-amber-100 text-amber-700'
                               : p.status === 'CALCULATED'
@@ -398,13 +398,13 @@ export function PayrollPage() {
                         <td className="py-3.5 px-4 text-center font-medium text-slate-700">
                           {Number(r.workingDays).toFixed(1)}
                         </td>
-                        <td className="py-3.5 px-4 text-center font-bold text-emerald-700">
+                        <td className="py-3.5 px-4 text-center font-bold text-emerald-700 dark:text-emerald-300">
                           {Number(r.workedDays).toFixed(1)}
                         </td>
                         <td className="py-3.5 px-4 text-right font-medium text-slate-900">
                           {formatMoney(r.grossAmount)}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-extrabold text-emerald-700">
+                        <td className="py-3.5 px-4 text-right font-extrabold text-emerald-700 dark:text-emerald-300">
                           {formatMoney(r.netAmount)}
                         </td>
                         <td className="py-3.5 px-4 text-right">
@@ -445,7 +445,7 @@ export function PayrollPage() {
                   >
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 text-emerald-700">
                           Đã phê duyệt
                         </span>
                         <span className="text-xs text-slate-400">
@@ -460,7 +460,7 @@ export function PayrollPage() {
                       </p>
                       <div className="mt-4 pt-3 border-t border-slate-100">
                         <span className="text-xs text-slate-500 block">Thực nhận (Net):</span>
-                        <span className="text-2xl font-black text-emerald-700 mt-0.5 block">
+                        <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-0.5 block">
                           {formatMoney(rec.netAmount)}
                         </span>
                       </div>

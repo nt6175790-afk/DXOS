@@ -5,7 +5,7 @@ const org = { name: 'organizationId', in: 'path', required: true, schema: uuid }
 const error = { $ref: '#/components/responses/ErrorResponse' };
 const body = (properties: object, required: string[] = []) => ({ required: true, content: { 'application/json': { schema: { type: 'object', additionalProperties: false, properties, required } } } });
 const operation = (summary: string, permission: string, id?: string) => ({ summary, security: [{ bearerAuth: [] }],
-  'x-required-permission': permission, description: 'JWT + ACTIVE membership + explicit permission. Tenant resources only; no implicit grants. See permission-provisioning.md for privilege ceiling, self mutation and shared identity restrictions.',
+  'x-required-permission': permission, description: 'JWT + ACTIVE membership + explicit permission. Tenant resources only; no implicit grants. Optional PATCH fields are non-nullable: explicit null is 400; omitted fields stay unchanged. See permission-provisioning.md for privilege ceiling, self mutation and shared identity restrictions.',
   parameters: [org, ...(id ? [{ name: id, in: 'path', required: true, schema: uuid }] : [])],
   responses: { '200': { description: 'Safe same-tenant metadata or mutation result; never credentials, sessions or hashes' }, '400': error, '401': error, '403': error, '404': error, '409': error } });
 const roleFields = { name: { type: 'string', minLength: 1, maxLength: 100 }, permissionKeys: { type: 'array', maxItems: 100, uniqueItems: true, items: { type: 'string' }, description: 'Known catalog keys already held by actor; changes additionally require role:assign' } };

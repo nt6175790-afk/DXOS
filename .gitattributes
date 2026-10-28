@@ -19,3 +19,5 @@
 licenses/** -text
 LICENSE -text
 NOTICE -text
+*.sh text eol=lf
+backend/deploy/clamav/*.conf text eol=lf

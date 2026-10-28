@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { verifyRuntimeImages } = require('./runtime-image-identity');
 async function unsealExisting(status, readShares, sendShare, readStatus) {
   if (!status.initialized) throw new Error('Existing initialized store required; use the first-install runbook');
   if (!status.sealed) return;
@@ -23,6 +24,7 @@ async function main() {
   }
   const run = args => { const r = spawnSync('docker', args, { encoding: 'utf8', timeout: 120000 }); if (r.status !== 0) throw new Error('Docker operation failed; start Docker Desktop/Engine and check existing containers'); };
   run(['info', '--format', '{{.ServerVersion}}']);
+  verifyRuntimeImages(args => { const r = spawnSync('docker', args, { encoding: 'utf8', timeout: 30000 }); return r.status === 0 ? r.stdout.trim() : ''; });
   run(['start', 'dxos-security-keycloak-1', 'dxos-security-clamav-1', 'dxos-security-redis-1', 'dxos-security-openbao-1', 'dxos-security-frontend-1', 'dxos-security-apisix-1', 'dxos-security-waf-1']);
   const call = async (route, body) => {
     const r = await fetch('https://localhost:8200/v1/' + route, { ...(body ? { method: 'POST', body: JSON.stringify(body) } : {}),

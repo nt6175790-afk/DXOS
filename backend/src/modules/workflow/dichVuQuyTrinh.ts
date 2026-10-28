@@ -98,13 +98,14 @@ export class WorkflowService implements OnModuleInit {
     // Optionally seed default workflows on startup
   }
 
-  async ensureDefaultDefinitions(organizationId: string, actorId: string) {
+  async ensureDefaultDefinitions(organizationId: string, actorId: string, database?: Prisma.TransactionClient) {
+    const db = database ?? this.prisma;
     for (const def of DEFAULT_WORKFLOWS) {
-      const existing = await this.prisma.workflowDefinition.findFirst({
+      const existing = await db.workflowDefinition.findFirst({
         where: { organizationId, triggerType: def.triggerType },
       });
       if (!existing) {
-        await this.prisma.workflowDefinition.create({
+        await db.workflowDefinition.create({
           data: {
             id: randomUUID(),
             organizationId,
@@ -152,11 +153,12 @@ export class WorkflowService implements OnModuleInit {
     });
   }
 
-  async getInstance(actorId: string, organizationId: string, instanceId: string) {
+  async getInstance(actorId: string, organizationId: string, instanceId: string, database?: Prisma.TransactionClient) {
+    const db = database ?? this.prisma;
     if (actorId !== 'system') {
-      await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_READ);
+      await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_READ, database);
     }
-    const instance = await this.prisma.workflowInstance.findFirst({
+    const instance = await db.workflowInstance.findFirst({
       where: { id: instanceId, organizationId },
       include: {
         definition: true,
@@ -175,12 +177,14 @@ export class WorkflowService implements OnModuleInit {
     actorId: string,
     organizationId: string,
     dto: CreateWorkflowInstanceDto,
+    database?: Prisma.TransactionClient,
   ) {
+    const db = database ?? this.prisma;
     if (actorId !== 'system') {
-      await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_CREATE);
+      await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_CREATE, database);
     }
 
-    const definition = await this.prisma.workflowDefinition.findFirst({
+    const definition = await db.workflowDefinition.findFirst({
       where: { id: dto.workflowDefinitionId, organizationId },
     });
     if (!definition) {
@@ -197,14 +201,14 @@ export class WorkflowService implements OnModuleInit {
     if (dto.data && JSON.stringify(dto.data).length > 16000) throw new BadRequestException('Workflow input is too large');
 
     // Determine a valid 36-char user ID for ownerUserId
-    const adminMember = await this.prisma.organizationMembership.findFirst({
+    const adminMember = await db.organizationMembership.findFirst({
       where: { organizationId, status: 'ACTIVE' },
       select: { userId: true },
     });
     const ownerUserId = isOrganizationIdentifier(actorId) ? actorId : (adminMember?.userId || randomUUID());
 
     const instanceId = randomUUID();
-    const createdInstance = await this.prisma.$transaction(async (tx) => {
+    const createdInstance = await this.transaction(async (tx) => {
       const instance = await tx.workflowInstance.create({
         data: {
           id: instanceId,
@@ -248,10 +252,10 @@ export class WorkflowService implements OnModuleInit {
       );
 
       return instance;
-    });
+    }, database);
 
     // Advance first step(s)
-    return this.advanceWorkflow(actorId, organizationId, createdInstance.id);
+    return this.advanceWorkflow(actorId, organizationId, createdInstance.id, 0, database);
   }
 
   async confirmStep(
@@ -376,17 +380,21 @@ export class WorkflowService implements OnModuleInit {
   }
 
   async retry(actorId: string, organizationId: string, instanceId: string) {
-    await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_UPDATE);
-    await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_READ);
-    const instance = await this.prisma.workflowInstance.findFirst({ where: { id: instanceId, organizationId } });
-    if (!instance) throw new NotFoundException();
-    if (instance.status !== WORKFLOW_STATUS.FAILED) throw new ConflictException('Only failed workflows can be retried');
-    await this.prisma.$transaction(async tx => {
-      const claimed = await tx.workflowInstance.updateMany({ where: { id: instanceId, organizationId, status: WORKFLOW_STATUS.FAILED }, data: { status: WORKFLOW_STATUS.RUNNING } });
-      if (claimed.count !== 1) throw new ConflictException();
+    const index = await this.transaction(async tx => {
+      // Lock and reload before authorizing a recovery or inspecting persisted steps.
+      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM workflow_instances WHERE id = ${instanceId} AND organization_id = ${organizationId} FOR UPDATE`;
+      await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_UPDATE, tx);
+      await this.assertPermission(actorId, organizationId, PERMISSIONS.WORKFLOW_READ, tx);
+      if (!rows.length) throw new NotFoundException();
+      const instance = await tx.workflowInstance.findFirstOrThrow({ where: { id: instanceId, organizationId }, include: { stepExecutions: true } });
+      const finalizationOnly = instance.status === WORKFLOW_STATUS.RUNNING && instance.stepExecutions.length > 0 &&
+        instance.stepExecutions.every(step => step.status === WORKFLOW_STEP_STATUS.COMPLETED);
+      if (instance.status !== WORKFLOW_STATUS.FAILED && !finalizationOnly) throw new ConflictException('Only failed workflows or completed-step finalization can be retried');
+      await tx.workflowInstance.update({ where: { id: instanceId }, data: { status: WORKFLOW_STATUS.RUNNING } });
       await this.audit.record({ event: AUDIT_EVENTS.WORKFLOW_RETRIED, organizationId, actorUserId: actorId, resourceId: instanceId }, tx);
+      return finalizationOnly ? 0 : instance.currentStepIndex;
     });
-    return this.advanceWorkflow(actorId, organizationId, instanceId, instance.currentStepIndex);
+    return this.advanceWorkflow(actorId, organizationId, instanceId, index);
   }
 
   private async advanceWorkflow(
@@ -394,8 +402,10 @@ export class WorkflowService implements OnModuleInit {
     organizationId: string,
     instanceId: string,
     startFromIndex = 0,
+    database?: Prisma.TransactionClient,
   ) {
-    const instance = await this.prisma.workflowInstance.findFirst({
+    const db = database ?? this.prisma;
+    const instance = await db.workflowInstance.findFirst({
       where: { id: instanceId, organizationId },
       include: {
         definition: true,
@@ -408,7 +418,7 @@ export class WorkflowService implements OnModuleInit {
 
     const steps = instance.stepExecutions;
     const updateActiveState = async (data: { currentStepIndex: number; status?: string }) => {
-      const result = await this.prisma.workflowInstance.updateMany({
+      const result = await db.workflowInstance.updateMany({
         where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING }, data,
       });
       if (result.count !== 1) throw new ConflictException('Workflow is no longer running');
@@ -430,14 +440,15 @@ export class WorkflowService implements OnModuleInit {
                 title: `[Quy trình] ${step.stepName}`,
                 message: `Đang xử lý bước: ${step.stepName} trong quy trình "${instance.title}".`,
               },
-            });
+            }, database);
             sent = true;
           }
-        } catch {
+        } catch (error) {
+          if (database) throw error;
           // Non-blocking notification delivery
         }
 
-        await this.prisma.workflowStepExecution.update({
+        await db.workflowStepExecution.update({
           where: { id: step.id },
           data: {
             status: WORKFLOW_STEP_STATUS.COMPLETED,
@@ -449,7 +460,7 @@ export class WorkflowService implements OnModuleInit {
         await updateActiveState({ currentStepIndex: i });
       } else if (step.stepType === WORKFLOW_STEP_TYPES.HUMAN_CONFIRMATION) {
         // Pauses here! Human confirmation required
-        await this.prisma.workflowStepExecution.update({
+        await db.workflowStepExecution.update({
           where: { id: step.id },
           data: {
             status: WORKFLOW_STEP_STATUS.WAITING_CONFIRMATION,
@@ -474,17 +485,18 @@ export class WorkflowService implements OnModuleInit {
                 workflowInstanceId: instance.id,
                 stepName: step.stepName,
               },
-            });
+            }, database);
           }
-        } catch {
+        } catch (error) {
+          if (database) throw error;
           // ignore notification failure
         }
 
         // Return current paused state
-        return this.getInstance(actorId, organizationId, instance.id);
+        return this.getInstance(actorId, organizationId, instance.id, database);
       } else if (step.stepType === WORKFLOW_STEP_TYPES.ACTION || step.stepType === WORKFLOW_STEP_TYPES.TASK) {
         try {
-          await this.prisma.$transaction(async tx => {
+          await this.transaction(async tx => {
             const locked = await tx.workflowInstance.updateMany({ where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING }, data: { currentStepIndex: i } });
             if (locked.count !== 1) throw new ConflictException('Workflow is no longer running');
             const fresh = await tx.workflowStepExecution.findFirstOrThrow({ where: { id: step.id, organizationId, workflowInstanceId: instance.id } });
@@ -493,22 +505,28 @@ export class WorkflowService implements OnModuleInit {
             const result = await this.actions.execute(tx, actorId, organizationId, current, fresh, instance.definition.triggerType);
             await tx.workflowStepExecution.update({ where: { id: step.id }, data: { status: WORKFLOW_STEP_STATUS.COMPLETED, executedAt: new Date(), completedAt: new Date(), resultPayload: JSON.stringify(result) } });
             await this.audit.record({ event: AUDIT_EVENTS.WORKFLOW_STEP_COMPLETED, organizationId, actorUserId: actorId, resourceId: instance.id }, tx);
-          }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-        } catch {
-          await this.prisma.$transaction(async tx => {
+          }, database);
+        } catch (error) {
+          if (database) throw error;
+          await this.transaction(async tx => {
             const changed = await tx.workflowInstance.updateMany({ where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING }, data: { status: WORKFLOW_STATUS.FAILED, currentStepIndex: i } });
             if (changed.count) {
               await tx.workflowStepExecution.update({ where: { id: step.id }, data: { status: WORKFLOW_STEP_STATUS.FAILED, resultPayload: JSON.stringify({ errorCode: 'WORKFLOW_ACTION_FAILED', message: 'Kiểm tra dữ liệu đầu vào và quyền nghiệp vụ trước khi thử lại.' }) } });
               await this.audit.record({ event: AUDIT_EVENTS.WORKFLOW_STEP_FAILED, organizationId, actorUserId: isOrganizationIdentifier(actorId) ? actorId : undefined, resourceId: instance.id }, tx);
             }
-          });
-          return this.getInstance(actorId, organizationId, instance.id);
+          }, database);
+          return this.getInstance(actorId, organizationId, instance.id, database);
         }
       }
     }
 
     // All steps completed!
-    await this.prisma.$transaction(async (tx) => {
+    const completed = await this.transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM workflow_instances WHERE id = ${instance.id} AND organization_id = ${organizationId} FOR UPDATE`;
+      if (!rows.length) throw new NotFoundException();
+      const current = await tx.workflowInstance.findFirstOrThrow({ where: { id: instance.id, organizationId } });
+      if (current.status === WORKFLOW_STATUS.COMPLETED) return false;
+      if (await tx.workflowStepExecution.count({ where: { organizationId, workflowInstanceId: instance.id, status: { not: WORKFLOW_STEP_STATUS.COMPLETED } } })) throw new ConflictException('Workflow still has unfinished steps');
       const result = await tx.workflowInstance.updateMany({
         where: { id: instance.id, organizationId, status: WORKFLOW_STATUS.RUNNING },
         data: {
@@ -527,8 +545,10 @@ export class WorkflowService implements OnModuleInit {
         },
         tx,
       );
-    });
+      return true;
+    }, database);
 
+    if (!completed) return this.getInstance(actorId, organizationId, instance.id, database);
     try {
       if (isOrganizationIdentifier(actorId)) {
         await this.notifications.createForRecipient({
@@ -540,18 +560,23 @@ export class WorkflowService implements OnModuleInit {
             message: `Quy trình "${instance.title}" đã hoàn tất tất cả các bước thành công.`,
             workflowInstanceId: instance.id,
           },
-        });
+        }, database);
       }
-    } catch {
+    } catch (error) {
+      if (database) throw error;
       // ignore
     }
 
-    return this.getInstance(actorId, organizationId, instance.id);
+    return this.getInstance(actorId, organizationId, instance.id, database);
   }
 
-  private async assertPermission(actorId: string, organizationId: string, permission: (typeof PERMISSIONS)[keyof typeof PERMISSIONS]) {
+  private transaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>, database?: Prisma.TransactionClient): Promise<T> {
+    return database ? operation(database) : this.prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  private async assertPermission(actorId: string, organizationId: string, permission: (typeof PERMISSIONS)[keyof typeof PERMISSIONS], database?: Prisma.TransactionClient) {
     if (actorId === 'system') return;
-    const permissions = await this.authorization.effectivePermissions(actorId, organizationId);
+    const permissions = await this.authorization.effectivePermissions(actorId, organizationId, database);
     if (!permissions || (!permissions.includes(permission) && !permissions.includes(PERMISSIONS.WORKFLOW_MANAGE))) {
       throw new ForbiddenException(`Missing required permission: ${permission}`);
     }

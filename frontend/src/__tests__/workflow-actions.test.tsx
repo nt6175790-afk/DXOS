@@ -38,3 +38,39 @@ describe('workflow business action inputs', () => {
     await waitFor(() => expect(state.listDefinitions).toHaveBeenCalled()); expect(screen.queryByRole('button', { name: 'Khởi chạy quy trình' })).not.toBeInTheDocument();
   });
 });
+
+
+describe('workflow completion recovery controls', () => {
+  const instance = (status = 'RUNNING', stepStatus = 'COMPLETED') => ({ id: 'recovery-instance', title: 'Recovery fixture', status, startedAt: '2026-10-28T01:00:00Z', currentStepIndex: 0,
+    stepExecutions: [{ id: 'step', stepIndex: 0, stepName: 'Task step', stepType: 'TASK', status: stepStatus }] });
+  beforeEach(() => {
+    vi.clearAllMocks(); state.permissions = new Set(['workflow:read', 'workflow:update']);
+    state.listDefinitions.mockResolvedValue(definitions); state.listInstances.mockResolvedValue([instance()]);
+    state.retry.mockResolvedValue(instance('COMPLETED'));
+  });
+  it('offers completion recovery and calls the existing retry API once', async () => {
+    render(<MemoryRouter><WorkflowsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByText('Recovery fixture'));
+    fireEvent.click(screen.getByRole('button', { name: 'Thử hoàn tất lại' }));
+    await waitFor(() => expect(state.retry).toHaveBeenCalledWith('org-a', 'recovery-instance'));
+    expect(state.retry).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Thử hoàn tất lại' })).not.toBeInTheDocument());
+  });
+  it('keeps a failed completion retry visible with an honest error', async () => {
+    state.retry.mockRejectedValue(new Error('fixture failure'));
+    render(<MemoryRouter><WorkflowsPage /></MemoryRouter>); fireEvent.click(await screen.findByText('Recovery fixture'));
+    fireEvent.click(screen.getByRole('button', { name: 'Thử hoàn tất lại' }));
+    await screen.findByText('Không thử lại được quy trình. Kiểm tra quyền và trạng thái.');
+    expect(screen.getByRole('button', { name: 'Thử hoàn tất lại' })).toBeEnabled();
+  });
+  it('does not offer recovery to a read-only viewer', async () => {
+    state.permissions = new Set(['workflow:read']); render(<MemoryRouter><WorkflowsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByText('Recovery fixture'));
+    expect(screen.queryByRole('button', { name: 'Thử hoàn tất lại' })).not.toBeInTheDocument();
+  });
+  it.each([['RUNNING', 'PENDING'], ['WAITING', 'WAITING_CONFIRMATION'], ['CANCELLED', 'COMPLETED'], ['COMPLETED', 'COMPLETED']])('does not offer completion recovery for %s/%s', async (status, stepStatus) => {
+    state.listInstances.mockResolvedValue([instance(status, stepStatus)]);
+    render(<MemoryRouter><WorkflowsPage /></MemoryRouter>); fireEvent.click(await screen.findByText('Recovery fixture'));
+    expect(screen.queryByRole('button', { name: 'Thử hoàn tất lại' })).not.toBeInTheDocument();
+  });
+});

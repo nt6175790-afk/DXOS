@@ -501,9 +501,9 @@ export function AttendancePage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium mb-1">Ngày công chuẩn</div>
+              <div className="text-xs text-slate-500 font-medium mb-1">Ngày đã ghi nhận</div>
               <div className="text-2xl font-bold text-slate-900">{summaryData?.totalWorkDays ?? 0}</div>
-              <div className="text-[11px] text-slate-400 mt-1">Từ thứ 2 đến thứ 6</div>
+              <div className="text-[11px] text-slate-400 mt-1">Số ngày có dữ liệu chấm công</div>
             </div>
 
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">

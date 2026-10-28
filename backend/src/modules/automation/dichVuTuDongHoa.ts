@@ -46,112 +46,72 @@ export class AutomationEngineService {
 
     const results = [];
     const today = new Date().toISOString().slice(0, 10);
-
     for (const rule of rules) {
       const idempotencyKey = `${event.organizationId}:${rule.id}:${event.entityType}:${event.entityId}:${today}`;
-
-      // Check for duplicate execution today
-      const existing = await this.prisma.automationExecution.findFirst({
-        where: {
-          organizationId: event.organizationId,
-          automationRuleId: rule.id,
-          idempotencyKey,
-        },
-      });
-
-      if (existing) {
-        this.logger.debug(`Skipping duplicate automation for key ${idempotencyKey}`);
-        results.push({ ruleId: rule.id, status: 'SKIPPED_IDEMPOTENT', idempotencyKey });
-        continue;
-      }
-
-      // Safe condition evaluation
-      let conditions: AutomationCondition[] = [];
-      try {
-        conditions = JSON.parse(rule.conditions || '[]');
-      } catch {
-        conditions = [];
-      }
-
-      const isSatisfied = this.evaluateConditions(conditions, event.data);
-      if (!isSatisfied) {
-        continue;
-      }
-
-      // Evaluate actions
-      let actions: AutomationAction[] = [];
-      try {
-        actions = JSON.parse(rule.actions || '[]');
-      } catch {
-        actions = [];
-      }
-
       const executionId = randomUUID();
       try {
-        for (const action of actions) {
-          await this.executeSafeAction(action, event, actorId, rule.id);
-        }
+        const result = await this.transaction(async tx => {
+          if (!(await this.lockRule(tx, event, actorId, rule.id))) return null;
+          const current = await tx.automationRule.findFirstOrThrow({ where: { id: rule.id, organizationId: event.organizationId } });
+          if (!current.isActive || current.trigger !== event.trigger) return null;
+          const existing = await tx.automationExecution.findFirst({ where: { organizationId: event.organizationId, automationRuleId: rule.id, idempotencyKey } });
+          if (existing) return { ruleId: rule.id, status: 'SKIPPED_IDEMPOTENT', idempotencyKey };
 
-        const execution = await this.prisma.automationExecution.create({
-          data: {
-            id: executionId,
-            organizationId: event.organizationId,
-            automationRuleId: rule.id,
-            event: event.trigger,
-            entityType: event.entityType,
-            entityId: event.entityId,
-            status: 'SUCCESS',
-            idempotencyKey,
-            metadata: JSON.stringify({ actionsExecuted: actions.length, eventData: event.data }),
-            completedAt: new Date(),
-          },
+          const conditions = JSON.parse(current.conditions || '[]') as AutomationCondition[];
+          if (!this.evaluateConditions(conditions, event.data)) return null;
+          const actions = JSON.parse(current.actions || '[]') as AutomationAction[];
+          for (const action of actions) await this.executeSafeAction(action, event, actorId, rule.id, tx);
+          await tx.automationExecution.create({ data: {
+            id: executionId, organizationId: event.organizationId, automationRuleId: rule.id,
+            event: event.trigger, entityType: event.entityType, entityId: event.entityId,
+            status: 'SUCCESS', idempotencyKey,
+            metadata: JSON.stringify({ actionsExecuted: actions.length, eventData: event.data }), completedAt: new Date(),
+          } });
+          await tx.automationRule.update({ where: { id: rule.id }, data: { lastRunAt: new Date() } });
+          await this.audit.record({ event: AUDIT_EVENTS.AUTOMATION_EXECUTED, organizationId: event.organizationId,
+            actorUserId: isOrganizationIdentifier(actorId) ? actorId : undefined, resourceId: executionId }, tx);
+          return { ruleId: rule.id, executionId, status: 'SUCCESS' };
         });
-
-        await this.prisma.automationRule.update({
-          where: { id: rule.id },
-          data: { lastRunAt: new Date() },
-        });
-
-        await this.audit.record({
-          event: AUDIT_EVENTS.AUTOMATION_EXECUTED,
-          organizationId: event.organizationId,
-          actorUserId: isOrganizationIdentifier(actorId) ? actorId : undefined,
-          resourceId: execution.id,
-        });
-
-        results.push({ ruleId: rule.id, executionId: execution.id, status: 'SUCCESS' });
+        if (result) results.push(result);
       } catch (error: unknown) {
-        // Provider/database errors may contain sensitive input: log only a safe category.
+        // The action transaction has rolled back. Never log provider/input data.
         this.logger.error(`Automation rule ${rule.id} failed`, { errorType: error instanceof Error ? error.name : 'UnknownError' });
-
-        const execution = await this.prisma.automationExecution.create({
-          data: {
-            id: executionId,
-            organizationId: event.organizationId,
-            automationRuleId: rule.id,
-            event: event.trigger,
-            entityType: event.entityType,
-            entityId: event.entityId,
-            status: 'FAILED',
-            idempotencyKey,
-            error: 'Automation action failed.',
-            metadata: JSON.stringify({ eventData: event.data }),
-            completedAt: new Date(),
-          },
+        const result = await this.transaction(async tx => {
+          if (!(await this.lockRule(tx, event, actorId, rule.id))) return null;
+          const existing = await tx.automationExecution.findFirst({ where: { organizationId: event.organizationId, automationRuleId: rule.id, idempotencyKey } });
+          if (existing) return { ruleId: rule.id, status: 'SKIPPED_IDEMPOTENT', idempotencyKey };
+          await tx.automationExecution.create({ data: {
+            id: executionId, organizationId: event.organizationId, automationRuleId: rule.id,
+            event: event.trigger, entityType: event.entityType, entityId: event.entityId,
+            status: 'FAILED', idempotencyKey, error: 'Automation action failed.',
+            metadata: JSON.stringify({ eventData: event.data }), completedAt: new Date(),
+          } });
+          await this.audit.record({ event: AUDIT_EVENTS.AUTOMATION_FAILED, organizationId: event.organizationId,
+            actorUserId: isOrganizationIdentifier(actorId) ? actorId : undefined, resourceId: executionId }, tx);
+          return { ruleId: rule.id, executionId, status: 'FAILED', error: 'Automation action failed.' };
         });
-
-        await this.audit.record({
-          event: AUDIT_EVENTS.AUTOMATION_FAILED,
-          organizationId: event.organizationId,
-          actorUserId: isOrganizationIdentifier(actorId) ? actorId : undefined,
-          resourceId: execution.id,
-        });
-
-        results.push({ ruleId: rule.id, executionId: execution.id, status: 'FAILED', error: 'Automation action failed.' });
+        if (result) results.push(result);
       }
     }
-
     return results;
+  }
+
+  private async lockRule(tx: Prisma.TransactionClient, event: TriggerEventContext, actorId: string, ruleId: string) {
+    const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM automation_rules WHERE id = ${ruleId} AND organization_id = ${event.organizationId} FOR UPDATE`;
+    if (!rows.length) return false;
+    if (actorId !== 'system' && !(await this.authorization.can(actorId, PERMISSIONS.AUTOMATION_MANAGE, event.organizationId, tx))) throw new ForbiddenException();
+    return true;
+  }
+
+  private async transaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        // The explicit rule lock protects the read/check/write sequence across workers.
+        return await this.prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2034' || attempt === 2) throw error;
+      }
+    }
   }
 
   private async executeSafeAction(
@@ -159,6 +119,7 @@ export class AutomationEngineService {
     event: TriggerEventContext,
     actorId: string,
     ruleId: string,
+    tx: Prisma.TransactionClient,
   ) {
     switch (action.type) {
       case AUTOMATION_ACTION_TYPES.CREATE_NOTIFICATION:
@@ -167,7 +128,7 @@ export class AutomationEngineService {
         const body = action.params?.message || `Hệ thống ghi nhận sự kiện đối với ${event.entityType} (ID: ${event.entityId}).`;
 
         // Get an active admin user or use the actor
-        const adminMember = await this.prisma.organizationMembership.findFirst({
+        const adminMember = await tx.organizationMembership.findFirst({
           where: { organizationId: event.organizationId, status: 'ACTIVE' },
           select: { userId: true },
         });
@@ -183,69 +144,67 @@ export class AutomationEngineService {
               message: body,
               ruleId,
             },
-          });
+          }, tx);
         }
         break;
       }
 
       case AUTOMATION_ACTION_TYPES.TRIGGER_WORKFLOW: {
         const triggerType = action.params?.triggerType || 'CONTRACT_RENEWAL';
-        let definition = await this.prisma.workflowDefinition.findFirst({
+        let definition = await tx.workflowDefinition.findFirst({
           where: { organizationId: event.organizationId, triggerType },
         });
 
         if (!definition) {
-          await this.workflows.ensureDefaultDefinitions(event.organizationId, actorId);
-          definition = await this.prisma.workflowDefinition.findFirst({
+          await this.workflows.ensureDefaultDefinitions(event.organizationId, actorId, tx);
+          definition = await tx.workflowDefinition.findFirst({
             where: { organizationId: event.organizationId, triggerType },
           });
         }
 
-        if (definition) {
-          const docTitle = event.data?.title || event.data?.documentTitle || 'Hợp đồng lao động';
-          const employeeName = event.data?.employeeName || 'Nhân sự';
-          await this.workflows.startWorkflow(actorId, event.organizationId, {
-            workflowDefinitionId: definition.id,
-            title: `[Tự động] ${definition.name} - ${employeeName} (${docTitle})`,
-            entityType: event.entityType,
-            entityId: event.entityId,
-            data: event.data,
-          });
-        }
+        if (!definition) throw new BadRequestException('Automation workflow definition is unavailable');
+        const docTitle = event.data?.title || event.data?.documentTitle || 'Hợp đồng lao động';
+        const employeeName = event.data?.employeeName || 'Nhân sự';
+        await this.workflows.startWorkflow(actorId, event.organizationId, {
+          workflowDefinitionId: definition.id,
+          title: `[Tự động] ${definition.name} - ${employeeName} (${docTitle})`,
+          entityType: event.entityType,
+          entityId: event.entityId,
+          data: event.data,
+        }, tx);
         break;
       }
 
       case AUTOMATION_ACTION_TYPES.CREATE_TASK: {
         // Create an automated task directly in the database
-        const creatorMember = await this.prisma.organizationMembership.findFirst({
+        const creatorMember = await tx.organizationMembership.findFirst({
           where: { organizationId: event.organizationId, status: 'ACTIVE' },
           include: { user: true },
         });
-        const employee = await this.prisma.employee.findFirst({
+        const employee = await tx.employee.findFirst({
           where: { organizationId: event.organizationId, status: 'ACTIVE' },
         });
 
-        if (creatorMember && employee) {
-          const taskTitle = action.params?.title || `[Tự động] Xử lý hồ sơ ${event.entityId}`;
-          const taskDesc = action.params?.description || `Tạo tự động bởi quy tắc HR Automation cho ${event.entityType}.`;
-          await this.prisma.task.create({
-            data: {
-              organizationId: event.organizationId,
-              creatorEmployeeId: employee.id,
-              assigneeEmployeeId: employee.id,
-              title: taskTitle,
-              description: taskDesc,
-              status: 'TODO',
-              priority: 'HIGH',
-              dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-          });
-        }
+        if (!creatorMember || !employee) throw new BadRequestException('Automation requires an active member and employee');
+        const taskTitle = action.params?.title || `[Tự động] Xử lý hồ sơ ${event.entityId}`;
+        const taskDesc = action.params?.description || `Tạo tự động bởi quy tắc HR Automation cho ${event.entityType}.`;
+        await tx.task.create({
+          data: {
+            organizationId: event.organizationId,
+            creatorEmployeeId: employee.id,
+            assigneeEmployeeId: employee.id,
+            title: taskTitle,
+            description: taskDesc,
+            status: 'TODO',
+            priority: 'HIGH',
+            dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          },
+        });
         break;
       }
 
       default:
-        this.logger.warn(`Unsupported action type: ${action.type}`);
+        throw new BadRequestException('Unsupported automation action');
     }
   }
 

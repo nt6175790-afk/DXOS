@@ -336,11 +336,11 @@ body, header, aside, .card, .btn-primary, .btn-secondary, input, select, textare
   border-color: var(--color-border) !important;
 }
 
-.dark .bg-slate-50 {
+.dark .bg-slate-50, .dark .bg-slate-50\/50 {
   background-color: var(--color-bg-secondary) !important;
 }
 
-.dark .bg-slate-100 {
+.dark .bg-slate-100, .dark .bg-slate-100\/50 {
   background-color: var(--color-bg-secondary) !important;
 }
 
@@ -354,6 +354,14 @@ body, header, aside, .card, .btn-primary, .btn-secondary, input, select, textare
 
 .dark .text-slate-500 {
   color: var(--color-text-muted) !important;
+}
+
+/* Legacy table/toolbars use opacity variants; their text needs an opaque theme surface. */
+.dark .bg-white\/50 {
+  background-color: var(--color-card) !important;
+}
+.dark .text-brand-800, .dark .text-brand-900 {
+  color: var(--color-primary-text) !important;
 }
 
 .dark .border-slate-200, .dark .border-slate-300 {

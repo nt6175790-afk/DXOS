@@ -110,7 +110,7 @@ Chỉ chạy trên database development/test. Đọc code seed trước khi ch�
 
 ### Security stack đầy đủ
 
-Xem [hướng dẫn local](docs/architecture/security-devsecops-setup.md). Giao diện qua WAF: http://localhost:8088. Stack này dùng MySQL trên host, OpenBao TLS/KV-v2/Raft và AppRole agent; không chứa secret/volume của máy gốc. Keycloak chỉ liên kết danh tính, không tự cấp quyền DX-OS. Sonar/SonarJS đã thay bằng quality gate mã nguồn mở.
+Xem [hướng dẫn local](docs/architecture/security-devsecops-setup.md). Giao diện qua WAF: http://localhost:8088. WAF dùng Coraza/OWASP CRS qua connector HTTP chính thức và proxy Go; cấu hình quy tắc tại `backend/deploy/waf/coraza.conf`. [Giới hạn và kiểm thử WAF](docs/architecture/waf-jose-remediation.md). Stack này dùng MySQL trên host, OpenBao TLS/KV-v2/Raft và AppRole agent; không chứa secret/volume của máy gốc. Keycloak chỉ liên kết danh tính, không tự cấp quyền DX-OS. Sonar/SonarJS đã thay bằng quality gate mã nguồn mở.
 
 Keycloak giữ phiên bản 26.8.1, được đóng gói trên OpenJDK 21 đã vá thay lớp JVM/CA cũ; xem [runtime hardening và kiểm thử SSO](docs/architecture/keycloak-runtime-hardening.md). Security Compose và CI sử dụng cùng image build; không cần thay realm, client hoặc mật khẩu đang có.
 

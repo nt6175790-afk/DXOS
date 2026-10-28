@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 DX-OS contributors
 // SPDX-License-Identifier: Apache-2.0
 import { Transform } from 'class-transformer';
-import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Matches, Max, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Matches, Max, Min, ValidateIf } from 'class-validator';
 import { PERMISSIONS } from './permission-catalog';
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
 export class AccountListDto {
@@ -16,8 +16,8 @@ export class CreateOrganizationUserDto {
   @Transform(trim) @IsString() @Length(1, 200) @Matches(/^\P{Cc}+$/u) displayName!: string;
 }
 export class UpdateOrganizationUserDto {
-  @IsOptional() @Transform(trim) @IsString() @Length(1, 200) @Matches(/^\P{Cc}+$/u) displayName?: string;
-  @IsOptional() @IsIn(['ACTIVE', 'INACTIVE', 'SUSPENDED']) membershipStatus?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  @ValidateIf((_object, value: unknown) => value !== undefined) @Transform(trim) @IsString() @Length(1, 200) @Matches(/^\P{Cc}+$/u) displayName?: string;
+  @ValidateIf((_object, value: unknown) => value !== undefined) @IsIn(['ACTIVE', 'INACTIVE', 'SUSPENDED']) membershipStatus?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 }
 export class CreateOrganizationRoleDto {
   @IsString() @Matches(/^[a-z][a-z0-9-]{1,62}$/) key!: string;
@@ -25,7 +25,7 @@ export class CreateOrganizationRoleDto {
   @IsArray() @ArrayMaxSize(100) @ArrayUnique() @IsIn(Object.values(PERMISSIONS), { each: true }) permissionKeys!: string[];
 }
 export class UpdateOrganizationRoleDto {
-  @IsOptional() @Transform(trim) @IsString() @Length(1, 100) name?: string;
-  @IsOptional() @IsBoolean() isActive?: boolean;
-  @IsOptional() @IsArray() @ArrayMaxSize(100) @ArrayUnique() @IsIn(Object.values(PERMISSIONS), { each: true }) permissionKeys?: string[];
+  @ValidateIf((_object, value: unknown) => value !== undefined) @Transform(trim) @IsString() @Length(1, 100) name?: string;
+  @ValidateIf((_object, value: unknown) => value !== undefined) @IsBoolean() isActive?: boolean;
+  @ValidateIf((_object, value: unknown) => value !== undefined) @IsArray() @ArrayMaxSize(100) @ArrayUnique() @IsIn(Object.values(PERMISSIONS), { each: true }) permissionKeys?: string[];
 }

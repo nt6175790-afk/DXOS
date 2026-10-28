@@ -35,3 +35,7 @@ Danh sách users dùng `limit` 1–100 mặc định 25, `after` UUID user; `{it
 Không cho tự sửa/xóa tài khoản qua API quản trị hay sửa role đang gán cho chính mình. Không deactivate role đang được gán. Đổi permissionKeys cần thêm role:assign và mọi key mới phải nằm trong quyền hiệu lực của người thao tác; unknown key bị 400. Không tạo cơ chế superadmin theo tên role. Email tồn tại trả 409 chung, không tiết lộ tenant; không tự liên kết identity bằng email đoán. Đổi tên toàn cục của user đã có membership ở tenant khác bị 409; trạng thái membership vẫn chỉ ảnh hưởng tenant hiện tại. Không có reset password/email hoặc xóa user toàn cục qua các API này.
 
 401 khi thiếu/sai session; 403 nếu thiếu quyền/inactive/foreign context hoặc tự thao tác bị cấm; 404 cho user/role không thuộc tenant sau khi đã được phân quyền; 409 cho xung đột vòng đời/unique/transaction. Mutation và audit commit cùng transaction Serializable. Không audit read catalog thành công. Không trả password/hash, session, JWT, refresh token hay storage secret.
+
+### PATCH null validation — 28/10/2026
+
+Optional fields in user and role PATCH requests distinguish omission from null. `displayName`, `membershipStatus`, `name`, `isActive` and `permissionKeys` are non-nullable: explicit null returns 400 before a write. Omitted fields remain unchanged; a permitted `permissionKeys: []` still clears grants under the existing privilege-ceiling/self-role rules. No new grants or administrator bypass.
