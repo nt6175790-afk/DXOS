@@ -2,6 +2,10 @@
 
 Ứng dụng quản lý doanh nghiệp đa tổ chức, giao diện tiếng Việt. Backend kiểm soát xác thực, quyền và phạm vi dữ liệu của từng tổ chức.
 
+<p align="center">
+  <img src="docs/assets/dxos-hld.svg" width="100%" alt="Kiến trúc tổng quan DX-OS: người dùng đi qua Coraza WAF tới giao diện React và API gateway APISIX; backend NestJS kiểm JWT và quyền theo tổ chức, xử lý nghiệp vụ, ghi MySQL kèm audit; trợ lý AI gọi LLM; Keycloak, OpenBao, ClamAV và Valkey là hạ tầng hỗ trợ.">
+</p>
+
 ## Phần mềm mã nguồn mở — Giấy phép Apache-2.0
 
 **DX-OS là phần mềm mã nguồn mở, được phát hành theo giấy phép Apache License, Version 2.0 (Apache-2.0).** Mã nguồn được công khai để người dùng có thể nghiên cứu, sử dụng, sửa đổi và phân phối theo các điều khoản của giấy phép.
