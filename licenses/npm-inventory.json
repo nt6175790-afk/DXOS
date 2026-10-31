@@ -15313,7 +15313,7 @@
     "area": "frontend",
     "location": "node_modules/follow-redirects",
     "name": "follow-redirects",
-    "version": "1.16.1",
+    "version": "1.16.2",
     "license": "MIT",
     "development": false,
     "installed": true,
