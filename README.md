@@ -65,6 +65,123 @@ Node.js 22.21.1 trở lên · NestJS · React 18/Vite/TypeScript · MySQL Commun
 | `licenses/` | Bằng chứng giấy phép và notices bên thứ ba |
 | `.github/` | CI, templates và Dependabot |
 
+## Kiến trúc và pipeline
+
+Bốn sơ đồ dưới đây mô tả đường đi của dữ liệu trong DX-OS:
+
+1. Request đi qua các lớp hạ tầng.
+2. Backend xử lý một thao tác nghiệp vụ.
+3. Trợ lý AI trả lời một câu hỏi.
+4. CI kiểm tra mỗi thay đổi.
+
+Chi tiết thêm ở [kiến trúc ba tầng](docs/architecture/architecture.md) và [hướng dẫn security stack](docs/architecture/security-devsecops-setup.md).
+
+### 1. Luồng request qua security stack
+
+```mermaid
+flowchart LR
+    U["Trình duyệt"] -->|"localhost:8088"| WAF["Coraza WAF<br/>OWASP CRS"]
+    WAF -->|"/api/*"| APX["APISIX<br/>giới hạn 30 req/s mỗi IP"]
+    WAF -->|"giao diện"| FE["Frontend<br/>React build trên nginx"]
+    APX --> API
+
+    subgraph API["Backend NestJS · /api/v1"]
+        direction TB
+        MW["Helmet · Request-ID · CORS"] --> GD["Guards<br/>JWT → quyền tổ chức → JSON"]
+        GD --> VP["ValidationPipe<br/>chặn trường lạ"]
+        VP --> SV["Controller → Service"]
+    end
+
+    SV -->|"Prisma"| DB[("MySQL 8")]
+    SV -.->|"quét file tải lên"| AV["ClamAV"]
+    SV -.->|"giới hạn đăng nhập"| VK["Valkey"]
+    SV -.->|"OIDC: liên kết danh tính"| KC["Keycloak"]
+    SV -.->|"agent AI"| LLM["Ollama · vLLM · mock"]
+    OB["OpenBao<br/>AppRole agent"] -.->|"secret lúc khởi động"| API
+```
+
+Trình duyệt chỉ vào ứng dụng qua WAF (cổng 8088). Keycloak, OpenBao và ClamAV chỉ mở cổng trên `127.0.0.1` để đăng nhập SSO và quản trị local. APISIX, backend và Valkey không mở cổng ra máy host. Secret (`DATABASE_URL`, `JWT_ACCESS_SECRET`, `AI_API_KEY`...) được nạp từ OpenBao vào bộ nhớ tiến trình khi backend khởi động, không nằm trong image hay biến môi trường của container. Mọi thành phần nét đứt đều tắt được: chạy local và test chỉ cần MySQL.
+
+### 2. Một thao tác nghiệp vụ trong backend
+
+Ví dụ: quản lý duyệt đơn nghỉ phép.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Người dùng
+    participant G as Guards
+    participant S as LeaveService
+    participant A as AuthorizationService
+    participant DB as MySQL
+
+    U->>G: POST /organizations/{orgId}/leave-requests/{id}/approve
+    G->>A: can(user, leave:approve, orgId)
+    A->>DB: tài khoản · membership ACTIVE · tổ chức · role · permission
+    A-->>G: cho phép (từ chối → 403 và ghi audit)
+    G->>S: DTO đã kiểm tra
+    rect rgba(15, 118, 110, 0.12)
+        Note over S,DB: Một transaction: cùng commit hoặc cùng rollback
+        S->>A: can(..., tx) kiểm lại quyền trong transaction
+        S->>DB: đọc và cập nhật theo (organizationId, id)
+        S->>DB: tạo thông báo cho người gửi đơn
+        S->>DB: ghi audit LEAVE_REQUEST_APPROVED
+    end
+    S-->>U: 200, hoặc error envelope chuẩn
+```
+
+Tổ chức chỉ được lấy từ UUID trên route, không bao giờ từ header, body hay JWT. Qua guard chưa có nghĩa là được đụng vào mọi bản ghi: service luôn lọc theo `organizationId` của route, nên ID của tổ chức khác trả về 404.
+
+### 3. Trợ lý AI trả lời một câu hỏi
+
+```mermaid
+flowchart TB
+    Q["Câu hỏi từ trang Trợ lý AI"] --> C["Controller<br/>quyền ai:use"]
+    C --> R["AiService<br/>ghi ai_request + audit"]
+    R --> P["Dựng prompt<br/>chỉ mô tả tool người hỏi được dùng"]
+    P --> M["Gọi model"]
+    M --> D{"Model xin<br/>gọi tool?"}
+    D -->|"có"| T["Tool registry<br/>kiểm tham số → kiểm quyền → truy vấn"]
+    T --> DB[("MySQL<br/>chỉ đọc, lọc theo tổ chức")]
+    T -->|"kết quả JSON, tối đa 3 vòng"| M
+    D -->|"không"| N["Đối chiếu con số<br/>với dữ liệu tool"]
+    N --> A["Câu trả lời + link nguồn + cảnh báo"]
+```
+
+Model không truy cập database. Nó chỉ chọn 1 trong 14 tool chỉ đọc. Backend kiểm lại quyền của người hỏi trước mỗi lần chạy tool và giới hạn kích thước kết quả (6.000 ký tự mỗi tool), số vòng (3) và thời gian (45 giây). Thao tác ghi duy nhất là tạo công việc, và chỉ xảy ra khi người dùng xác nhận bản nháp. Chi tiết: [spec agent](docs/architecture/ai-agent-v1-spec.md).
+
+### 4. Pipeline CI
+
+```mermaid
+flowchart LR
+    E["push · pull request"] --> V & S & D
+
+    subgraph V["verify"]
+        direction TB
+        V1["Kiểm giấy phép và chính sách công bố"] --> V2["Prisma validate · lint backend"]
+        V2 --> V3["Jest trên MySQL tạm + coverage"]
+        V3 --> V4["Đánh giá AI agent theo vai trò"]
+        V4 --> V5["Build · kiểm OIDC · audit giấy phép"]
+        V5 --> V6["npm audit · frontend lint/test/build"]
+        V6 --> V7["Quality gate mã nguồn mở"]
+    end
+
+    subgraph S["scan"]
+        direction TB
+        S1["Trivy quét repo"] --> S2["Build 8 image runtime"]
+        S2 --> S3["Đăng nhập Keycloak S256 thật"]
+        S3 --> S4["Trivy quét image + SBOM"]
+    end
+
+    subgraph D["source-demo"]
+        direction TB
+        D1["Xuất đúng revision đang test"] --> D2["Dựng demo sạch từ source"]
+        D2 --> D3["Kiểm migration, seed, đăng nhập,<br/>chấm công, tách tổ chức"]
+    end
+```
+
+Ba job chạy song song trên mỗi push và pull request (`.github/workflows/security.yml`). Test MySQL luôn chạy trên database tạm có tên riêng và xóa sau khi xong; Trivy dừng pipeline khi gặp lỗ hổng HIGH hoặc CRITICAL.
+
 ## Chạy từ bản clone mới
 
 **Dành cho giảng viên/người chấm:** làm theo [hướng dẫn mở và test demo từ máy mới](docs/architecture/teacher-demo-quickstart.md), gồm cấu hình, tạo tài khoản và xử lý lỗi thường gặp. Repository này là mã nguồn; chưa có website demo công khai.
@@ -116,7 +233,7 @@ Keycloak giữ phiên bản 26.8.1, được đóng gói trên OpenJDK 21 đã v
 
 ### Trợ lý AI
 
-Trợ lý là agent **chỉ đọc** tự viết, không dùng LangChain. Model chọn trong 13 công cụ tra cứu: công việc, phê duyệt, nghỉ phép, chấm công, lịch, hồ sơ giấy tờ, phòng ban, nhân sự, số liệu tổng hợp và `calculate` để tính toán. Trước mỗi lần chạy công cụ, backend kiểm lại quyền của người hỏi trong tổ chức và chỉ trả các trường được phép (không có số điện thoại, email, lương từng người). Câu trả lời có nút nguồn dẫn tới bản ghi và cảnh báo khi số liệu không khớp dữ liệu. Không lưu hội thoại phía server, không có RAG/vector. Thiết kế: [spec](docs/architecture/ai-agent-v1-spec.md), [HLD](docs/architecture/ai-agent-v1-hld.md), [API](contracts/api/ai.md).
+Trợ lý là agent **chỉ đọc** tự viết, không dùng LangChain. Model chọn trong 14 công cụ tra cứu: công việc, phê duyệt, nghỉ phép, chấm công, lịch, hồ sơ giấy tờ, phòng ban, nhân sự, số liệu tổng hợp, `search_knowledge` tra cứu PDF và `calculate` để tính toán. Trước mỗi lần chạy công cụ, backend kiểm lại quyền của người hỏi trong tổ chức và chỉ trả các trường được phép (không có số điện thoại, email, lương từng người). Câu trả lời có nút nguồn dẫn tới bản ghi và cảnh báo khi số liệu không khớp dữ liệu. Không lưu hội thoại phía server. Tra cứu PDF dùng tìm theo từ khóa, chưa có vector. Thiết kế: [spec](docs/architecture/ai-agent-v1-spec.md), [HLD](docs/architecture/ai-agent-v1-hld.md), [API](contracts/api/ai.md).
 
 Mặc định `AI_PROVIDER=mock`: chạy offline, không cần key, hiểu các câu hỏi mẫu và gọi cùng bộ công cụ. Để dùng model open-weight gpt-oss qua server tương thích OpenAI, chọn nơi chạy model:
 
