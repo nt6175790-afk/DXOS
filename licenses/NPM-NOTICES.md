@@ -894,7 +894,7 @@ Not installed means absent on this platform; collect notices again for the actua
 | frontend | find-up@5.0.0 | MIT | development | [text 5c932d88](texts/5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3.txt) |
 | frontend | flat-cache@4.0.1 | MIT | development | [text a6a23fb7](texts/a6a23fb76d91d98669f5ed6eb58213df594ab2d56c9e981ae021b194e3d662a7.txt) |
 | frontend | flatted@3.4.4 | ISC | development | [text 14871860](texts/148718606d34f467fd08a2176bb4c1ab275f999576f779368503d8d3e3642861.txt) |
-| frontend | follow-redirects@1.16.1 | MIT | production | [text bfa8a54b](texts/bfa8a54bb952ccda79f0f1889721d108f5b605babbb2b8a3705ffb52f4132eb7.txt) |
+| frontend | follow-redirects@1.16.2 | MIT | production | [text bfa8a54b](texts/bfa8a54bb952ccda79f0f1889721d108f5b605babbb2b8a3705ffb52f4132eb7.txt) |
 | frontend | form-data@4.0.6 | MIT | production | [text e5b780d4](texts/e5b780d4f38d1d3328e3e53186c4e62d3fa149ea6f2bacd5de5ad0c30ac85343.txt) |
 | frontend | fraction.js@5.3.4 | MIT | development | [text ea6916b6](texts/ea6916b674c353de0e9b84b9c91e3b3f8c620a1000d6a65662961b8a67840f19.txt) |
 | frontend | fsevents@2.3.3 | MIT | development | not installed on this platform |
