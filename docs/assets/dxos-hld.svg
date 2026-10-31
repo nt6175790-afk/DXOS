@@ -1,0 +1,129 @@
+<!-- SPDX-FileCopyrightText: 2026 DX-OS contributors. SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 790" width="1440" height="790" role="img" aria-labelledby="hld-title hld-desc">
+  <title id="hld-title">Kiến trúc tổng quan DX-OS</title>
+  <desc id="hld-desc">Người dùng truy cập qua Coraza WAF. Giao diện React được phục vụ trực tiếp, còn API đi qua APISIX tới backend NestJS. Backend kiểm JWT và quyền theo tổ chức, xử lý các module nghiệp vụ, ghi MySQL kèm audit trong cùng transaction. Trợ lý AI gọi LLM. Keycloak, OpenBao, ClamAV và Valkey là hạ tầng hỗ trợ.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" orient="auto">
+      <path d="M2,1 L10,6 L2,11" fill="none" stroke="#111111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+      .flow { fill: none; stroke: #111111; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+      .bus { fill: none; stroke: #8B3A8F; stroke-width: 2.2; stroke-dasharray: 7 6; stroke-linecap: round; }
+      .pill-text { font-size: 25px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+      .mod-text { font-size: 17px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+      .tag { font-size: 14.5px; font-weight: 700; fill: #8B3A8F; letter-spacing: 1.6px; text-anchor: middle; }
+      .tag-left { font-size: 14px; font-weight: 700; fill: #8B3A8F; letter-spacing: 1.6px; }
+      .note { font-size: 14px; fill: #5F6B7A; text-anchor: middle; }
+      .edge-label { font-size: 14px; font-weight: 600; fill: #3B4652; text-anchor: end; }
+      .svc-text { font-size: 20px; font-weight: 700; fill: #1D1D1F; }
+    </style>
+  </defs>
+
+  <!-- Canvas -->
+  <rect x="1" y="1" width="1438" height="788" rx="24" fill="#FFFFFF" stroke="#E7E1EA" stroke-width="2"/>
+  <text x="40" y="62" font-size="30" font-weight="800" fill="#1F4E6E">DX-OS<tspan font-weight="600" fill="#5F6B7A"> · Kiến trúc tổng quan</tspan></text>
+  <text x="40" y="92" font-size="16" fill="#5F6B7A">Quản lý doanh nghiệp đa tổ chức · mọi quyền được kiểm tra ở backend theo từng tổ chức</text>
+
+  <!-- User -->
+  <g fill="#1F4E6E">
+    <circle cx="120" cy="266" r="36"/>
+    <path d="M58,372 C58,322 86,308 120,308 C154,308 182,322 182,372 Q182,378 176,378 H64 Q58,378 58,372 Z"/>
+  </g>
+  <text x="120" y="410" class="tag">NGƯỜI DÙNG</text>
+  <text x="120" y="432" class="note">Trình duyệt web</text>
+  <path d="M194,320 H256" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- Edge: WAF -->
+  <rect x="262" y="284" width="200" height="72" rx="36" fill="#52B1D6" stroke="#1D1D1F" stroke-width="3"/>
+  <text x="362" y="329" class="pill-text">Coraza WAF</text>
+  <text x="362" y="384" class="tag">BẢO VỆ BIÊN · OWASP CRS</text>
+
+  <!-- Split to UI and API -->
+  <path d="M462,320 H486 Q500,320 500,306 V216 Q500,202 514,202 H534" class="flow" marker-end="url(#arrow)"/>
+  <path d="M486,320 Q500,320 500,334 V418 Q500,432 514,432 H534" class="flow" marker-end="url(#arrow)"/>
+  <text x="490" y="256" class="edge-label">giao diện</text>
+  <text x="490" y="412" class="edge-label">/api/*</text>
+
+  <!-- Frontend -->
+  <rect x="540" y="170" width="210" height="64" rx="32" fill="#DDBFC3"/>
+  <text x="645" y="211" class="pill-text" fill="#5B2E45" style="fill:#5B2E45">Frontend</text>
+  <text x="645" y="262" class="tag">REACT · VITE · TIẾNG VIỆT</text>
+
+  <!-- APISIX -->
+  <rect x="540" y="400" width="210" height="64" rx="32" fill="#4796B7" stroke="#1D1D1F" stroke-width="3"/>
+  <text x="645" y="441" class="pill-text">APISIX</text>
+  <text x="645" y="492" class="tag">API GATEWAY · 30 REQ/S</text>
+  <path d="M750,432 H806" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- Backend -->
+  <rect x="812" y="130" width="380" height="470" rx="28" fill="#F2F8FB" stroke="#4796B7" stroke-width="3"/>
+  <text x="1002" y="172" font-size="24" font-weight="800" fill="#1F4E6E" text-anchor="middle">Backend NestJS</text>
+  <text x="1002" y="196" class="note">/api/v1 · modular monolith</text>
+
+  <rect x="836" y="212" width="332" height="56" rx="28" fill="#1F4E6E"/>
+  <text x="1002" y="247" class="mod-text">JWT → Quyền theo tổ chức</text>
+  <path d="M1002,268 V288" class="flow" stroke-width="2.6" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect x="836" y="294" width="158" height="46" rx="23" fill="#52B1D6"/>
+    <text x="915" y="323" class="mod-text">Nhân sự</text>
+    <rect x="1010" y="294" width="158" height="46" rx="23" fill="#52B1D6"/>
+    <text x="1089" y="323" class="mod-text">Chấm công</text>
+    <rect x="836" y="352" width="158" height="46" rx="23" fill="#52B1D6"/>
+    <text x="915" y="381" class="mod-text">Nghỉ phép</text>
+    <rect x="1010" y="352" width="158" height="46" rx="23" fill="#52B1D6"/>
+    <text x="1089" y="381" class="mod-text">Công việc</text>
+    <rect x="836" y="410" width="158" height="46" rx="23" fill="#52B1D6"/>
+    <text x="915" y="439" class="mod-text">Workflow</text>
+    <rect x="1010" y="410" width="158" height="46" rx="23" fill="#52B1D6"/>
+    <text x="1089" y="439" class="mod-text">Tài liệu</text>
+    <rect x="836" y="476" width="158" height="46" rx="23" fill="#DDBFC3"/>
+    <text x="915" y="505" class="mod-text" style="fill:#5B2E45">Audit log</text>
+    <rect x="1010" y="476" width="158" height="46" rx="23" fill="#7B3F8C"/>
+    <text x="1089" y="505" class="mod-text">Trợ lý AI</text>
+  </g>
+  <text x="1002" y="566" class="note">Prisma · dữ liệu và audit trong cùng transaction</text>
+
+  <!-- MySQL -->
+  <path d="M1192,300 H1242" class="flow" marker-end="url(#arrow)"/>
+  <g transform="translate(1310,230)">
+    <path d="M-62,0 V120 A62,17 0 0 0 62,120 V0 Z" fill="#6FA3F7"/>
+    <path d="M-62,40 A62,17 0 0 0 62,40" fill="none" stroke="#DCE8FD" stroke-width="6"/>
+    <path d="M-62,80 A62,17 0 0 0 62,80" fill="none" stroke="#DCE8FD" stroke-width="6"/>
+    <ellipse cx="0" cy="0" rx="62" ry="17" fill="#DCE8FD"/>
+  </g>
+  <text x="1310" y="398" class="tag">MYSQL 8</text>
+  <text x="1310" y="420" class="note">dữ liệu tách theo tổ chức</text>
+
+  <!-- LLM -->
+  <path d="M1168,499 H1219" class="flow" marker-end="url(#arrow)"/>
+  <rect x="1225" y="470" width="170" height="60" rx="30" fill="#7B3F8C" stroke="#1D1D1F" stroke-width="3"/>
+  <text x="1310" y="509" class="pill-text">gpt-oss</text>
+  <text x="1310" y="558" class="tag">LLM · CHỈ ĐỌC QUA TOOL</text>
+  <text x="1310" y="580" class="note">Ollama · vLLM · mock</text>
+
+  <!-- Supporting services -->
+  <text x="270" y="530" class="tag-left">HẠ TẦNG BẢO MẬT · BẬT/TẮT BẰNG CẤU HÌNH</text>
+  <path d="M490,583 H510 M490,695 H510 M730,583 H770 M730,695 H770 M770,560 V695 M770,560 H812" class="bus"/>
+
+  <rect x="270" y="556" width="220" height="54" rx="27" fill="#FFFFFF" stroke="#B5413F" stroke-width="3"/>
+  <circle cx="300" cy="583" r="8" fill="#B5413F"/>
+  <text x="318" y="590" class="svc-text">Keycloak</text>
+  <text x="380" y="636" class="tag">ĐĂNG NHẬP SSO</text>
+
+  <rect x="510" y="556" width="220" height="54" rx="27" fill="#FFFFFF" stroke="#2F6F4E" stroke-width="3"/>
+  <circle cx="540" cy="583" r="8" fill="#2F6F4E"/>
+  <text x="558" y="590" class="svc-text">OpenBao</text>
+  <text x="620" y="636" class="tag">SECRET LÚC KHỞI ĐỘNG</text>
+
+  <rect x="270" y="668" width="220" height="54" rx="27" fill="#FFFFFF" stroke="#C77C1E" stroke-width="3"/>
+  <circle cx="300" cy="695" r="8" fill="#C77C1E"/>
+  <text x="318" y="702" class="svc-text">ClamAV</text>
+  <text x="380" y="748" class="tag">QUÉT VIRUS TỆP</text>
+
+  <rect x="510" y="668" width="220" height="54" rx="27" fill="#FFFFFF" stroke="#4796B7" stroke-width="3"/>
+  <circle cx="540" cy="695" r="8" fill="#4796B7"/>
+  <text x="558" y="702" class="svc-text">Valkey</text>
+  <text x="620" y="748" class="tag">GIỚI HẠN ĐĂNG NHẬP</text>
+</svg>
